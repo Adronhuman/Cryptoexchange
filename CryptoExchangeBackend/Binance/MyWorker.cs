@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace CryptoExchangeBackend.Binance
 {
@@ -17,7 +16,8 @@ namespace CryptoExchangeBackend.Binance
             using var scope = sp.CreateScope();
             var binanceClient = scope.ServiceProvider.GetService<BinanceClient>()!;
 
-            binanceClient.OnDepthUpdate += (s, depthUpdate) => {
+            binanceClient.OnDepthUpdate += (s, depthUpdate) =>
+            {
                 Trace.TraceInformation($"got depth update - {depthUpdate.LastUpdateId}");
             };
             binanceClient.ListenForUpdates();

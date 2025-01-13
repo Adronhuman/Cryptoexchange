@@ -1,4 +1,4 @@
-﻿namespace BlazorAppWebAssembly.Client.Settings
+﻿namespace Frontend.Client.Settings
 {
     public class OrderBookApiInfo
     {

@@ -1,6 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.Json;
 
 namespace CryptoExchangeBackend.Binance
 {
@@ -19,7 +18,7 @@ namespace CryptoExchangeBackend.Binance
         public string Quantity { get; set; }
     }
 
-    public class DepthUpdateStreamEvent 
+    public class DepthUpdateStreamEvent
     {
         [JsonPropertyName("stream")]
         public string Stream { get; set; }
@@ -48,7 +47,7 @@ namespace CryptoExchangeBackend.Binance
         [JsonPropertyName("b")]
         public List<Order> Bids { get; set; }
 
-        
+
         [JsonPropertyName("a")]
         public List<Order> Asks { get; set; }
     }

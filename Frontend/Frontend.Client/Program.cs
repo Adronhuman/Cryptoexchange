@@ -1,9 +1,6 @@
-using BlazorAppWebAssembly.Client.DI;
-using BlazorAppWebAssembly.Client.Services;
-using BlazorAppWebAssembly.Client.Settings;
+using Frontend.Client.DI;
+using Frontend.Client.Settings;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 

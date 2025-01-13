@@ -1,14 +1,14 @@
-﻿using BlazorAppWebAssembly.Client.Services;
-using BlazorAppWebAssembly.Client.Settings;
+﻿using Frontend.Client.Services;
+using Frontend.Client.Settings;
 using Microsoft.AspNetCore.SignalR.Client;
 
-namespace BlazorAppWebAssembly.Client.DI
+namespace Frontend.Client.DI
 {
     public static class RegisterClientServices
     {
         public static IServiceCollection AddClientServices(this IServiceCollection services)
         {
-            services.AddTransient<HubConnection>(serviceProvider =>
+            services.AddTransient(serviceProvider =>
             {
                 var orderBookApi = serviceProvider.GetService<OrderBookApiInfo>();
                 var connection = new HubConnectionBuilder()

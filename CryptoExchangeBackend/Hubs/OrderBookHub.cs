@@ -2,7 +2,7 @@
 
 namespace CryptoExchangeBackend.Hubs
 {
-    public class OrderBookHub: Hub
+    public class OrderBookHub : Hub
     {
         public async Task SendOrderBookUpdate(string orderBookDiff)
         {

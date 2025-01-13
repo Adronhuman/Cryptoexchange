@@ -1,16 +1,15 @@
-﻿using BlazorAppWebAssembly.Client.Models;
-using BlazorAppWebAssembly.Client.Settings;
-using Core.Shared;
-using Core.Shared.Models;
+﻿using Core.Shared.Models;
+using Frontend.Client.Models;
+using Frontend.Client.Settings;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Collections.Concurrent;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Web;
 
-namespace BlazorAppWebAssembly.Client.Services
+namespace Frontend.Client.Services
 {
-    public class OrderBookService: IAsyncDisposable
+    public class OrderBookService : IAsyncDisposable
     {
         private readonly HubConnection _hubConnection;
         private readonly OrderBookApiInfo _apiInfo;
@@ -20,18 +19,18 @@ namespace BlazorAppWebAssembly.Client.Services
         public event EventHandler<OrderBookDiff> OrderBookUpdate = delegate { };
         public event EventHandler<OrderBookView> NewOrderBook = delegate { };
 
-        public List<int> AvailableSizes 
+        public List<int> AvailableSizes
         {
-            get { return _apiInfo.DepthLevels; } 
+            get { return _apiInfo.DepthLevels; }
         }
 
-        public OrderBookService(HubConnection hubConnection, 
+        public OrderBookService(HubConnection hubConnection,
             IHttpClientFactory httpClientFactory,
             OrderBookApiInfo apiInfo)
         {
-            this._hubConnection = hubConnection;
-            this._apiInfo = apiInfo;
-            this._httpClient = httpClientFactory.CreateClient("OrderBookHttpClient");
+            _hubConnection = hubConnection;
+            _apiInfo = apiInfo;
+            _httpClient = httpClientFactory.CreateClient("OrderBookHttpClient");
             _orderBookManager = new OrderBookManager(10);
         }
 
@@ -75,11 +74,12 @@ namespace BlazorAppWebAssembly.Client.Services
                 try
                 {
                     var orderBookDiff = JsonSerializer.Deserialize<OrderBookDiff>(diffJson);
-                    if (orderBookDiff != null) 
+                    if (orderBookDiff != null)
                         OrderBookUpdate.Invoke(this, orderBookDiff);
                 }
-                catch (Exception ex){
-                
+                catch (Exception ex)
+                {
+
                 }
             });
 

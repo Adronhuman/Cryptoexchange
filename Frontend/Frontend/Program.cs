@@ -1,10 +1,6 @@
-using BlazorAppWebAssembly.Client.Pages;
-using BlazorAppWebAssembly.Client.Services;
-using BlazorAppWebAssembly.Components;
-using BlazorAppWebAssembly.Hubs;
-using BlazorAppWebAssembly.Client.DI;
-using Microsoft.AspNetCore.SignalR.Client;
-using BlazorAppWebAssembly.Client.Settings;
+using Frontend.Client.DI;
+using Frontend.Client.Settings;
+using Frontend.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,7 +36,6 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(BlazorAppWebAssembly.Client._Imports).Assembly);
+    .AddAdditionalAssemblies(typeof(Frontend.Client._Imports).Assembly);
 
-app.MapHub<OrderBookHub>("/orderBookHub");
 app.Run();

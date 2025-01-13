@@ -1,6 +1,6 @@
 ﻿using Core.Shared.Models;
 
-namespace BlazorAppWebAssembly.Client.Models
+namespace Frontend.Client.Models
 {
     public class OrderBookView
     {

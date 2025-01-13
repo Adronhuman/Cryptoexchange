@@ -1,7 +1,7 @@
-﻿using BlazorAppWebAssembly.Client.Models;
-using Core.Shared.Models;
+﻿using Core.Shared.Models;
+using Frontend.Client.Models;
 
-namespace BlazorAppWebAssembly.Client.Services
+namespace Frontend.Client.Services
 {
     public class OrderBookManager
     {
@@ -18,12 +18,12 @@ namespace BlazorAppWebAssembly.Client.Services
 
         public void LoadInitial(IEnumerable<Order> bids, IEnumerable<Order> asks)
         {
-            foreach(var bid in bids)
+            foreach (var bid in bids)
             {
                 Bids[bid.Price] = bid.Amount;
             }
 
-            foreach(var ask in asks)
+            foreach (var ask in asks)
             {
                 Asks[ask.Price] = ask.Amount;
             }
