@@ -3,9 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchangeFrontend", "CryptoexchangeFrontend\CryptoExchangeFrontend.csproj", "{97BC621A-5753-4562-87CD-D16386DC11BF}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoExchangeBackend", "CryptoExchangeBackend\CryptoExchangeBackend.csproj", "{3061BE8D-EC3C-4593-8EAA-BDB284E72292}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Shared", "Core.Shared\Core.Shared.csproj", "{A3C3E6C9-8048-4A23-A163-3663A115658F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorAppWebAssembly", "BlazorAppWebAssembly\BlazorAppWebAssembly\BlazorAppWebAssembly.csproj", "{FCA5F59C-FE7E-46BE-AE02-D2D37BD6A8EE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorAppWebAssembly.Client", "BlazorAppWebAssembly\BlazorAppWebAssembly.Client\BlazorAppWebAssembly.Client.csproj", "{3807448D-6BC2-46D2-A657-E5E0EF0C8651}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,14 +17,22 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{97BC621A-5753-4562-87CD-D16386DC11BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{97BC621A-5753-4562-87CD-D16386DC11BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{97BC621A-5753-4562-87CD-D16386DC11BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{97BC621A-5753-4562-87CD-D16386DC11BF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3061BE8D-EC3C-4593-8EAA-BDB284E72292}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3061BE8D-EC3C-4593-8EAA-BDB284E72292}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3061BE8D-EC3C-4593-8EAA-BDB284E72292}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3061BE8D-EC3C-4593-8EAA-BDB284E72292}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3C3E6C9-8048-4A23-A163-3663A115658F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3C3E6C9-8048-4A23-A163-3663A115658F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3C3E6C9-8048-4A23-A163-3663A115658F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3C3E6C9-8048-4A23-A163-3663A115658F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCA5F59C-FE7E-46BE-AE02-D2D37BD6A8EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCA5F59C-FE7E-46BE-AE02-D2D37BD6A8EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCA5F59C-FE7E-46BE-AE02-D2D37BD6A8EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCA5F59C-FE7E-46BE-AE02-D2D37BD6A8EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3807448D-6BC2-46D2-A657-E5E0EF0C8651}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3807448D-6BC2-46D2-A657-E5E0EF0C8651}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3807448D-6BC2-46D2-A657-E5E0EF0C8651}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3807448D-6BC2-46D2-A657-E5E0EF0C8651}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

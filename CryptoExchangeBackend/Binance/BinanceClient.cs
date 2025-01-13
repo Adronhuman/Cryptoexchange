@@ -43,7 +43,8 @@ namespace CryptoExchangeBackend.Binance
 
             await client.ConnectAsync(new Uri(WebSocketUri), cancellationToken);
 
-            var buffer = new byte[1024 * 8];
+            // need to handle case when message is bigger
+            var buffer = new byte[1024 * 20];
 
             var receiveResult = await client.ReceiveAsync(
                 new ArraySegment<byte>(buffer), cancellationToken);

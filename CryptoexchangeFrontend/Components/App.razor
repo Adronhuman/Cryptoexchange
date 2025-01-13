@@ -1,4 +1,7 @@
-﻿<!DOCTYPE html>
+﻿@using CryptoExchangeFrontend.Settings
+@inject Microsoft.Extensions.Options.IOptions<BackendSettings> BackendSettings
+
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -9,6 +12,13 @@
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="CryptoexchangeFrontend.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.10/signalr.min.js"></script>
+    <script>
+        window.backendSettings = {
+            backendUrl: '@BackendSettings.Value.BackendUrl'
+        };
+    </script>
+
     <HeadOutlet />
 </head>
 

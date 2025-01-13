@@ -1,10 +1,32 @@
-using CryptoexchangeFrontend.Components;
+using CryptoExchangeFrontend;
+using CryptoExchangeFrontend.Components;
+using CryptoExchangeFrontend.Settings;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddSignalR(e =>
+{
+    e.EnableDetailedErrors = true;
+    e.MaximumReceiveMessageSize = 102400000;
+});
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.Configure<BackendSettings>(builder.Configuration.GetSection("BackendSettings"));
+builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("OrderBookHttpClient", (sp, httpClient)=>
+{
+    var backendSettings = sp.GetRequiredService<IOptions<BackendSettings>>().Value;
+    httpClient.BaseAddress = new Uri($"{backendSettings.BackendUrl}/");
+});
+
+//builder.Services.AddScoped<OrderBookService>();
+//builder.Services.AddSingleton<SignalRService>();
 
 var app = builder.Build();
 
@@ -16,7 +38,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 app.UseAntiforgery();

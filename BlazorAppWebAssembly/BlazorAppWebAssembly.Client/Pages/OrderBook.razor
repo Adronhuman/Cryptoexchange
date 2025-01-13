@@ -1,0 +1,80 @@
+﻿@page "/"
+@using BlazorAppWebAssembly.Client.Services
+@using Core.Shared
+@using Core.Shared.Models
+@rendermode InteractiveWebAssembly
+
+@inject OrderBookService OrderBookService
+
+<PageTitle>Order Book</PageTitle>
+
+<h1>Order book</h1>
+
+@if (Bids == null || Asks == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="order-book">
+        <div class="order-book-column">
+            <h4>Bids</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Price</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var bid in Bids)
+                    {
+                        <tr>
+                            <td>@bid.Price</td>
+                            <td>@bid.Amount</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="order-book-column">
+            <h4>Asks</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Price</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ask in Asks)
+                    {
+                        <tr>
+                            <td>@ask.Price</td>
+                            <td>@ask.Amount</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+
+    private List<Order> Bids;
+    private List<Order> Asks;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        OrderBookService.NewOrderBook += (s, orderBook) => {
+            Bids = orderBook.Bids.ToList();
+            Asks = orderBook.Asks.ToList();
+            StateHasChanged();
+        };
+
+        await OrderBookService.InitializeOrderBookAsync(10);
+    }
+}
