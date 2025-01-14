@@ -1,7 +1,6 @@
-﻿using Core.Shared.Models;
-using Frontend.Client.Models;
+﻿using Core.Shared.Domain.Models;
 
-namespace Frontend.Client.Services
+namespace Core.Shared.Domain.Operations
 {
     public class OrderBookManager
     {
@@ -9,9 +8,15 @@ namespace Frontend.Client.Services
         private SortedDictionary<decimal, decimal> Asks { get; set; }
         private int Size { get; set; }
 
+
+
+        // to remove
+        private HashSet<decimal> bids;
+        private HashSet<decimal> asks;
+
         public OrderBookManager(int size)
         {
-            Bids = [];
+            Bids = new(new DescendingComparer<decimal>());
             Asks = [];
             Size = size;
         }
@@ -35,6 +40,14 @@ namespace Frontend.Client.Services
             UpdateOrders(Asks, diff.Asks);
         }
 
+        public void ApplyUpdate(OrderBookDiff diff, HashSet<decimal> bids, HashSet<decimal> asks)
+        {
+            this.bids = bids;
+            this.asks = asks;
+            UpdateOrders(Bids, diff.Bids);
+            UpdateOrders(Asks, diff.Asks);
+        }
+
         private void UpdateOrders(SortedDictionary<decimal, decimal> orders, IEnumerable<OrderDiff> diffs)
         {
             foreach (var orderChange in diffs)
@@ -44,12 +57,13 @@ namespace Frontend.Client.Services
                     case ChangeType.Added:
                         {
                             if (!orders.TryAdd(orderChange.Price, orderChange.Amount))
+                                //orders.Add(orderChange.Price, orderChange.Amount)
                                 orders[orderChange.Price] = orderChange.Amount;
                             break;
                         }
                     case ChangeType.Updated:
                         {
-                            orders[orderChange.Price] = orders[orderChange.Amount];
+                            orders[orderChange.Price] = orderChange.Amount;
                             break;
                         }
                     case ChangeType.Deleted:
@@ -61,11 +75,10 @@ namespace Frontend.Client.Services
             }
         }
 
-        public OrderBookView GetCurrentBook()
+        public OrderBook GetCurrentBook()
         {
-            var view = new OrderBookView
+            var view = new OrderBook
             {
-                Depth = Size,
                 Bids = SelectTopOrders(Bids, Size),
                 Asks = SelectTopOrders(Asks, Size)
             };
@@ -80,5 +93,13 @@ namespace Frontend.Client.Services
                 .Select((keyValue) => new Order(keyValue.Key, keyValue.Value));
         }
 
+    }
+
+    class DescendingComparer<T> : IComparer<T> where T : IComparable<T>
+    {
+        public int Compare(T x, T y)
+        {
+            return y.CompareTo(x);
+        }
     }
 }

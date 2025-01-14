@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace CryptoExchangeBackend.Binance
+namespace CryptoExchangeBackend.Providers.Binance
 {
     public class OrderBook
     {
@@ -14,8 +14,8 @@ namespace CryptoExchangeBackend.Binance
 
     public class Order
     {
-        public string Price { get; set; }
-        public string Quantity { get; set; }
+        public decimal Price { get; set; }
+        public decimal Quantity { get; set; }
     }
 
     public class DepthUpdateStreamEvent
@@ -24,10 +24,10 @@ namespace CryptoExchangeBackend.Binance
         public string Stream { get; set; }
 
         [JsonPropertyName("data")]
-        public DepthUpdate Data { get; set; }
+        public UpdateData Data { get; set; }
     }
 
-    public class DepthUpdate
+    public class UpdateData
     {
         [JsonPropertyName("e")]
         public string EventType { get; set; }
@@ -62,10 +62,10 @@ namespace CryptoExchangeBackend.Binance
             }
 
             reader.Read();
-            string price = reader.GetString();
+            var price = decimal.Parse(reader.GetString());
 
             reader.Read();
-            string quantity = reader.GetString();
+            var quantity = decimal.Parse(reader.GetString());
 
             reader.Read();
 
@@ -75,8 +75,8 @@ namespace CryptoExchangeBackend.Binance
         public override void Write(Utf8JsonWriter writer, Order value, JsonSerializerOptions options)
         {
             writer.WriteStartArray();
-            writer.WriteStringValue(value.Price);
-            writer.WriteStringValue(value.Quantity);
+            writer.WriteStringValue(value.Price.ToString());
+            writer.WriteStringValue(value.Quantity.ToString());
             writer.WriteEndArray();
         }
     }

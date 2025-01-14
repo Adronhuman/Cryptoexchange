@@ -1,10 +1,9 @@
-﻿using Core.Shared.Models;
-using Frontend.Client.Models;
+﻿using Core.Shared;
+using Core.Shared.Domain.Models;
+using Core.Shared.Domain.Operations;
 using Frontend.Client.Settings;
 using Microsoft.AspNetCore.SignalR.Client;
-using System.Collections.Concurrent;
 using System.Net.Http.Json;
-using System.Text.Json;
 using System.Web;
 
 namespace Frontend.Client.Services
@@ -17,7 +16,7 @@ namespace Frontend.Client.Services
         private readonly OrderBookManager _orderBookManager;
 
         public event EventHandler<OrderBookDiff> OrderBookUpdate = delegate { };
-        public event EventHandler<OrderBookView> NewOrderBook = delegate { };
+        public event EventHandler<OrderBook> NewOrderBook = delegate { };
 
         public List<int> AvailableSizes
         {
@@ -31,24 +30,23 @@ namespace Frontend.Client.Services
             _hubConnection = hubConnection;
             _apiInfo = apiInfo;
             _httpClient = httpClientFactory.CreateClient("OrderBookHttpClient");
-            _orderBookManager = new OrderBookManager(10);
+            _orderBookManager = new OrderBookManager(20);
         }
 
         // TODO: add error handling
         public async Task InitializeOrderBookAsync(int size)
         {
-            var updates = new ConcurrentStack<OrderBookDiff>();
-
-            EventHandler<OrderBookDiff> collectUpdate = (e, update) => updates.Push(update);
+            var updates = new Queue<OrderBookDiff>();
+            EventHandler<OrderBookDiff> collectUpdate = (e, update) => updates.Enqueue(update);
             SubscribeToUpdate(collectUpdate);
 
             await ListenToUpdates(size);
 
             var snapshot = await GetWholeOrderBook(size);
-            _orderBookManager.LoadInitial(snapshot.Bids, snapshot.Asks);
+            _orderBookManager.LoadInitial(snapshot.OrderBook.Bids, snapshot.OrderBook.Asks);
 
-            // Apply any updates from the stack that are newer than the snapshot
-            while (updates.TryPop(out var update))
+            // Apply any updates from the queue that are newer than the snapshot
+            while (updates.TryDequeue(out var update))
             {
                 if (update.TimeStamp >= snapshot.TimeStamp)
                     _orderBookManager.ApplyUpdate(update);
@@ -69,18 +67,9 @@ namespace Frontend.Client.Services
 
         public async Task ListenToUpdates(int size)
         {
-            _hubConnection.On<string>("OrderBookUpdate", (diffJson) =>
+            _hubConnection.On<OrderBookDiff>(SignalREndpoints.OrderBookUpdate, (diff) =>
             {
-                try
-                {
-                    var orderBookDiff = JsonSerializer.Deserialize<OrderBookDiff>(diffJson);
-                    if (orderBookDiff != null)
-                        OrderBookUpdate.Invoke(this, orderBookDiff);
-                }
-                catch (Exception ex)
-                {
-
-                }
+                OrderBookUpdate.Invoke(this, diff);
             });
 
             await _hubConnection.StartAsync();

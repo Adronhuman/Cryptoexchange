@@ -1,5 +1,6 @@
-using Core.Shared.Models;
+using Core.Shared.Domain.Models;
 using CryptoExchangeBackend.Hubs;
+using CryptoExchangeBackend.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using System.Text.Json;
@@ -11,22 +12,19 @@ namespace CryptoExchangeBackend.Controllers
     public class ExchangeController : ControllerBase
     {
         private readonly IHubContext<OrderBookHub> _hubContext;
+        private readonly IOrderBookProvider _orderBookProvider;
 
-        public ExchangeController(IHubContext<OrderBookHub> orderBookHub)
+        public ExchangeController(IHubContext<OrderBookHub> orderBookHub, IOrderBookProvider orderBookProvider)
         {
             this._hubContext = orderBookHub;
+            this._orderBookProvider = orderBookProvider;
         }
 
         [HttpGet("orderBook")]
-        public IActionResult GetOrderBook()
+        public async Task<IActionResult> GetOrderBook()
         {
-            var mockResult = new OrderBookSnapshot
-            {
-                Bids = [new Order(10, 100)],
-                Asks = [new Order(228, 1488)]
-            };
-
-            return Ok(mockResult);
+            var result = await _orderBookProvider.GetOrderBookSnapshot();
+            return Ok(result);
         }
 
         [HttpPost("testUpdate")]

@@ -1,5 +1,7 @@
-using CryptoExchangeBackend.Binance;
 using CryptoExchangeBackend.Hubs;
+using CryptoExchangeBackend.Interfaces;
+using CryptoExchangeBackend.Providers.Binance;
+using CryptoExchangeBackend.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,8 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSignalR();
 builder.Services.AddHttpClient();
 
-builder.Services.AddScoped<BinanceClient>();
-builder.Services.AddHostedService<MyWorker>();
+builder.Services.AddSingleton<IOrderBookProvider, OrderBookProvider>();
+builder.Services.AddHostedService<StreamingDataWorker>();
 
 builder.Services.AddControllers();
 

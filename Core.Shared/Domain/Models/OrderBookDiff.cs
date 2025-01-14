@@ -1,4 +1,4 @@
-﻿namespace Core.Shared.Models
+﻿namespace Core.Shared.Domain.Models
 {
     public class OrderBookDiff
     {

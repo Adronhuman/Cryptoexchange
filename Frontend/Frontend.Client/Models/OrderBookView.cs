@@ -1,4 +1,4 @@
-﻿using Core.Shared.Models;
+﻿using Core.Shared.Domain.Models;
 
 namespace Frontend.Client.Models
 {

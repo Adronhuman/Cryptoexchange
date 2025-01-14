@@ -1,8 +1,7 @@
-﻿namespace Core.Shared.Models
+﻿namespace Core.Shared.Domain.Models
 {
-    public class OrderBookSnapshot
+    public class OrderBook
     {
-        public int TimeStamp { get; set; }
         public IEnumerable<Order> Bids { get; set; }
         public IEnumerable<Order> Asks { get; set; }
     }
