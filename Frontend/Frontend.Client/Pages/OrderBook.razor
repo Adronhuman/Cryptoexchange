@@ -1,13 +1,15 @@
 ﻿@page "/"
 @using Core.Shared.Domain.Models
 @using Frontend.Client.Services
-@rendermode InteractiveWebAssembly
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender:false));
 
 @inject OrderBookService OrderBookService
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Order Book</PageTitle>
 
 <h1>Order book</h1>
+<div id="chartContainer"/>
 
 @if (Bids.Count == 0 && Asks.Count == 0)
 {
@@ -78,14 +80,20 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        OrderBookService.NewOrderBook += (s, orderBook) => {
+        OrderBookService.NewOrderBook += async (s, orderBook) => {
             Bids = orderBook.Bids.ToList();
             Asks = orderBook.Asks.ToList();
-            InvokeAsync(StateHasChanged);
+            await JSRuntime.InvokeVoidAsync("updateChart", Bids, Asks);
+            await InvokeAsync(StateHasChanged);
         };
 
         await Refresh();
         ConfigurePeriodicRefresh();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender){
+        if (firstRender)
+            await JSRuntime.InvokeVoidAsync("initializeChart", Bids, Asks);
     }
 
     private async Task Refresh(){
