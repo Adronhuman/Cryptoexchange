@@ -10,9 +10,8 @@ namespace Core.Shared
     {
         public enum OrderBookSize
         {
-            S5 = 5,
-            S10 = 10,
-            S20 = 20
+            S50 = 50,
+            S100 = 100,
         }
     }
 }

@@ -8,7 +8,7 @@ using static Core.Shared.Constants;
 using DomainOrderBook = Core.Shared.Domain.Models.OrderBook;
 using DomainOrder = Core.Shared.Domain.Models.Order;
 
-namespace CryptoExchangeBackend.Providers.Binance
+namespace CryptoExchangeBackend.Impl.Providers.Binance
 {
     public delegate void OrderBookUpdatedEventHandler(object sender, OrderBookDiff diff, OrderBookSnapshot snapshot);
 
@@ -29,7 +29,7 @@ namespace CryptoExchangeBackend.Providers.Binance
             _updateQueue = channel.Reader;
             _apiClient.PullUpdates(async (u) => await channel.Writer.WriteAsync(u));
 
-            OrderBookSize = (int) size;
+            OrderBookSize = (int)size;
             _orderBookManager = new OrderBookManager(OrderBookSize);
         }
 
@@ -114,7 +114,7 @@ namespace CryptoExchangeBackend.Providers.Binance
         {
             var diffBuilder = new OrderBookDiffBuilder();
 
-            var currentBidPrices = GetPricesSet(currentBook.Bids, OrderBookSize, desc:true);
+            var currentBidPrices = GetPricesSet(currentBook.Bids, OrderBookSize, desc: true);
             var currentAskPrices = GetPricesSet(currentBook.Asks, OrderBookSize);
             var newBidPrices = GetPricesSet(newBook.Bids, OrderBookSize, desc: true);
             var newAskPrices = GetPricesSet(newBook.Asks, OrderBookSize);
@@ -165,9 +165,9 @@ namespace CryptoExchangeBackend.Providers.Binance
             }
         }
 
-        private static SortedSet<decimal> GetPricesSet(IEnumerable<Order> orders, int size, bool desc=false)
+        private static SortedSet<decimal> GetPricesSet(IEnumerable<Order> orders, int size, bool desc = false)
         {
-            var topN = orders.OrderBy(o => desc ? -o.Price: o.Price).Take(size).Select(o => o.Price);
+            var topN = orders.OrderBy(o => desc ? -o.Price : o.Price).Take(size).Select(o => o.Price);
             return new(topN, desc ? new DescendingComparer<decimal>() : null);
         }
         private static SortedSet<decimal> GetPricesSet(IEnumerable<DomainOrder> orders, int size, bool desc = false)

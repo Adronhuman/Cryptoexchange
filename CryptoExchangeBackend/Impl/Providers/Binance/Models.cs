@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace CryptoExchangeBackend.Providers.Binance
+namespace CryptoExchangeBackend.Impl.Providers.Binance
 {
     public class OrderBook
     {

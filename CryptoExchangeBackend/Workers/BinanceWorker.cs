@@ -1,8 +1,8 @@
 ﻿using Core.Shared;
 using CryptoExchangeBackend.Hubs;
+using CryptoExchangeBackend.Impl.Providers;
+using CryptoExchangeBackend.Impl.Providers.Binance;
 using CryptoExchangeBackend.Interfaces;
-using CryptoExchangeBackend.Providers;
-using CryptoExchangeBackend.Providers.Binance;
 using Microsoft.AspNetCore.SignalR;
 using System.Data;
 using System.Diagnostics;
@@ -14,39 +14,61 @@ namespace CryptoExchangeBackend.Workers
     {
         private readonly ApiClient _apiClient;
         private readonly IHubContext<OrderBookHub> _hubContext;
+        private readonly IOrderBookLogger _logger;
         private readonly MultiplePriceLevelsOrderBookProvider _mplorderBookProvider;
         private readonly List<CancelAndRestartTask> _tasks = [];
 
-        public BinanceWorker(ApiClient httpClientFactory, IHubContext<OrderBookHub> hubContext, 
+        public BinanceWorker(ApiClient httpClientFactory, IHubContext<OrderBookHub> hubContext,
+            IOrderBookLogger logger,
             MultiplePriceLevelsOrderBookProvider mplorderBookProvider)
         {
+            _logger = logger;
             this._apiClient = httpClientFactory;
             this._hubContext = hubContext;
+            this._logger = logger;
             this._mplorderBookProvider = mplorderBookProvider;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var levels = new[] { OrderBookSize.S5, OrderBookSize.S10, OrderBookSize.S20 };
+            var levels = new[] { OrderBookSize.S50, OrderBookSize.S100};
             foreach (var level in levels)
             {
-                var (provider, endpoint) = SetupOrderBookProviderForSize(level);
+                var (provider, endpoint) = SetupOrderBookProviderForSize(level,
+                    // The largest order book contains all entries found in smaller ones
+                    // Therefore, it makes sense to log just this one
+                    shouldLog: level == levels.Last());
                 _mplorderBookProvider.Configure(level, provider, endpoint);
             }
 
-            // garbage collector please don't touch this stackframe 🥺
-            await Task.Delay(Timeout.Infinite);
+            await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
-        private (OrderBookProvider, string) SetupOrderBookProviderForSize(OrderBookSize size)
+        private (OrderBookProvider, string) SetupOrderBookProviderForSize(OrderBookSize size, bool shouldLog = false)
         {
             var orderBookProvider = new OrderBookProvider(_apiClient, size);
             var endpoint = string.Format(SignalREndpoints.OrderBookUpdate, (int)size);
 
+            if (shouldLog)
+            {
+                // a little bit about storing snapshots
+
+                // Lets estimate how much memory can it cost
+                // Order: (decimal price, decimal amount) = 16*2 ≈ 32 bytes
+                // Snapshot: (Bids: 100 Orders, Asks: 100 Orders) + TimeStamp = 200*32 + 8 ≈ 6.4 Kb
+                // IF we are updated once per second:
+                // 6.4 Kb * 60 seconds * 60 minutes * 24 hours ≈ 553.6512 Mb (per day)
+                orderBookProvider.Subscribe((orderBookDiff, snapshot) =>
+                {
+                    _logger.LogSnapshot(snapshot);
+                });
+            }
+            
             orderBookProvider.Subscribe((orderBookDiff, snapshot) =>
             {
                 _hubContext.Clients.All.SendAsync(endpoint, orderBookDiff);
             });
+
 
             _tasks.Add(
                 new CancelAndRestartTask((cancellationToken) =>

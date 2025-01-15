@@ -1,4 +1,4 @@
-﻿namespace CryptoExchangeBackend.Providers.Binance
+﻿namespace CryptoExchangeBackend.Impl.Providers.Binance
 {
     public class Constants
     {

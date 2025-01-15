@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Threading.Channels;
 using static Core.Shared.Constants;
 
-namespace CryptoExchangeBackend.Providers.Binance
+namespace CryptoExchangeBackend.Impl.Providers.Binance
 {
     public class ApiClient
     {
@@ -39,7 +39,7 @@ namespace CryptoExchangeBackend.Providers.Binance
             return model;
         }
 
-        public async void PullUpdates(Action<Changes> onUpdate) 
+        public async void PullUpdates(Action<Changes> onUpdate)
         {
             UpdateStreamEvent += (s, data) => onUpdate(data);
         }

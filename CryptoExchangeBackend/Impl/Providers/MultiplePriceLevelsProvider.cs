@@ -1,7 +1,7 @@
 ﻿using CryptoExchangeBackend.Interfaces;
 using static Core.Shared.Constants;
 
-namespace CryptoExchangeBackend.Providers
+namespace CryptoExchangeBackend.Impl.Providers
 {
     public class MultiplePriceLevelsOrderBookProvider
     {

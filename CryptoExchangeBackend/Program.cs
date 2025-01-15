@@ -1,7 +1,9 @@
 using CryptoExchangeBackend.Hubs;
+using CryptoExchangeBackend.Impl;
+using CryptoExchangeBackend.Impl.Loggers;
+using CryptoExchangeBackend.Impl.Providers;
+using CryptoExchangeBackend.Impl.Providers.Binance;
 using CryptoExchangeBackend.Interfaces;
-using CryptoExchangeBackend.Providers;
-using CryptoExchangeBackend.Providers.Binance;
 using CryptoExchangeBackend.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,9 +14,21 @@ builder.Services.AddHttpClient();
 
 builder.Services.AddSingleton<ApiClient>();
 builder.Services.AddSingleton<MultiplePriceLevelsOrderBookProvider>();
-builder.Services.AddHostedService<BinanceWorker>();
+builder.Services.AddSingleton<IOrderBookLogger>(sp =>
+{
+    try
+    {
+        var connectionString = builder.Configuration.GetConnectionString("MongoDb");
+        return new MongoOrderBookLogger(connectionString);
+    }
+    catch
+    {
+        return new FallbackLogger();
+    }
+});
 
 builder.Services.AddControllers();
+builder.Services.AddHostedService<BinanceWorker>();
 
 builder.Services.AddCors(options =>
 {
