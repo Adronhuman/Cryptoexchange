@@ -1,74 +1,36 @@
 ﻿@page "/"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender:false));
+
 @using Core.Shared.Domain.Models
 @using Frontend.Client.Services
-@rendermode @(new InteractiveWebAssemblyRenderMode(prerender:false));
+@using Frontend.Client.Components;
 
 @inject OrderBookService OrderBookService
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Order Book</PageTitle>
 
-<h1>Order book</h1>
-<div id="chartContainer"/>
+<div class="parent-container">
+    <div class="chart-and-controls">
+        <h1>Order Book</h1>
+        <label for="size-dropdown">Size</label>
+        <select id="size-dropdown" value="@SelectedSize" @onchange="OnSizeChanged" class="form-select">
+            @foreach (var size in availableSizes)
+            {
+                <option value="@size">@size</option>
+            }
+        </select>
 
-@if (Bids.Count == 0 && Asks.Count == 0)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{   
-    <label>Size</label>
-    <select value="@SelectedSize" @onchange="OnSizeChanged" class="form-select">
-        @foreach (var size in availableSizes)
+        @if (Bids.Count == 0 && Asks.Count == 0)
         {
-            <option value="@size">@size</option>
+            <p><em>Loading...</em></p>
         }
-    </select>
 
-    <div class="order-book">
-        <div class="order-book-column">
-            <h4>Bids</h4>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Price</th>
-                        <th>Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var bid in Bids)
-                    {
-                        <tr>
-                            <td>@bid.Price</td>
-                            <td>@bid.Amount</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <div class="order-book-column">
-            <h4>Asks</h4>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Price</th>
-                        <th>Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var ask in Asks)
-                    {
-                        <tr>
-                            <td>@ask.Price</td>
-                            <td>@ask.Amount</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+        <div id="chartContainer"></div>
     </div>
-}
+
+    <BuyBTC OrderBookService="OrderBookService"/>
+</div>
 
 @code {
     private List<int> availableSizes = [50, 100];
@@ -118,3 +80,35 @@ else
         });
     }
 }
+
+<style>
+    .parent-container {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+
+    .chart-and-controls {
+        flex: 1;
+        display: flex;
+        flex-direction: column; 
+        gap: 10px;
+    }
+
+    .chart-and-controls .form-select {
+        max-width: 200px;
+        padding: 8px;
+        font-size: 1rem;
+    }
+
+    #chartContainer {
+        flex: 1;
+        background-color: #333;
+        border-radius: 5px;
+        min-height: 300px;
+    }
+
+    BuyBTC {
+        width: 300px;
+    }
+</style>

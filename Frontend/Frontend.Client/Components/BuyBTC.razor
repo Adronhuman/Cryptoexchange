@@ -1,0 +1,115 @@
+﻿@inject IJSRuntime JSRuntime
+@using Frontend.Client.Services
+
+<div class="form-container">
+    <h1>Buy Bitcoin</h1>
+    <div class="form-group">
+        <label for="btc-amount">Enter BTC Amount:</label>
+        <input type="number" @oninput="Debounce" step="0.0001" id="btc-amount" placeholder="e.g., 0.01" />
+    </div>
+    <div class="price-info">
+        <p>btc amounnt: @BtcAmount</p>
+        <p>Total Price: @FormatCurrencyInEUR(TotalPrice)</p>
+    </div>
+    @* <button @onclick="HandleDebouncedCalculation">Call dotnet method</button> *@
+</div>
+
+
+@code {
+    [Parameter]
+    public OrderBookService OrderBookService { get; set; }
+
+    private CancellationTokenSource TypingInProcessCancellation;
+    private decimal BtcAmount = 0;
+    private decimal TotalPrice = 0;
+
+    // strange version of setTimeout (not a lot of alternatives)
+    private async Task Debounce(ChangeEventArgs e)
+    {
+        Console.WriteLine("Debounce called - previous should be cancelled");
+        TypingInProcessCancellation?.Cancel();
+        if (e.Value.ToString() == string.Empty)
+        {
+            BtcAmount = TotalPrice = 0;
+            return;
+        }
+
+        TypingInProcessCancellation = new CancellationTokenSource();
+        var token = TypingInProcessCancellation.Token;
+        try
+        {
+            BtcAmount = decimal.Parse(e.Value.ToString());
+            await Task.Delay(500, token);
+            if (!token.IsCancellationRequested) {
+                UpdatePrice();
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            Console.WriteLine("Debounce cancelled");
+        }
+    }
+
+    public void UpdatePrice()
+    {
+        TotalPrice = OrderBookService.CalculatePrice(BtcAmount);
+        Console.WriteLine($"Btc amount updated {BtcAmount} {TotalPrice}");
+        InvokeAsync(StateHasChanged);
+    }
+    
+    private string FormatCurrencyInEUR(decimal value)
+    {
+        return value.ToString("C", new System.Globalization.CultureInfo("de-DE"));
+    }
+}
+
+<style>
+    .form-container {
+        background: #2a2a3c;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        max-width: 300px;
+        margin: auto;
+        color: white;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+    }
+
+    input {
+        width: 100%;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 1rem;
+    }
+
+    input:focus {
+        outline: none;
+    }
+
+    .price-info {
+        margin-top: 15px;
+        font-size: 0.9rem;
+        color: #f0b90b;
+    }
+
+    .btn {
+        background: #f0b90b;
+        color: #000;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        font-size: 1rem;
+        cursor: pointer;
+        margin-top: 15px;
+        width: 100%;
+    }
+</style>

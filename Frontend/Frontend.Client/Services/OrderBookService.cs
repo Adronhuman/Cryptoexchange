@@ -3,10 +3,12 @@ using Core.Shared.Domain.Models;
 using Core.Shared.Domain.Operations;
 using Frontend.Client.Settings;
 using Microsoft.AspNetCore.SignalR.Client;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Reflection.Metadata.Ecma335;
+using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using System.Web;
 
@@ -76,6 +78,37 @@ namespace Frontend.Client.Services
             {
                 await _hubConnection.StartAsync();
             }
+        }
+
+        public decimal CalculatePrice(decimal requestedAmount)
+        {
+            var topAsks = _orderBookManager.GetCurrentBook().Asks;
+
+            decimal totalPrice = 0;
+            decimal amountToCover = requestedAmount;
+            foreach (var ask in topAsks)
+            {
+                if (amountToCover <= ask.Price)
+                {
+                    totalPrice += ask.Price * amountToCover;
+                    amountToCover = 0;
+                    break;
+                }
+                else
+                {
+                    amountToCover -= ask.Amount;
+                    totalPrice += ask.Amount * ask.Price;
+                }
+            }
+
+            if (amountToCover == 0) return totalPrice;
+
+            // Warning: a little bit of voodoo dance;
+            // In the long run trade-off should be reconsidered
+            // for now - cover the remaining amount using price from last known ask
+            var biggestPrice = topAsks.Last().Price;
+            totalPrice += amountToCover * biggestPrice;
+            return totalPrice;
         }
 
         private void Refresh()
