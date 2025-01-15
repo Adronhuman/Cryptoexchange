@@ -2,6 +2,6 @@
 {
     public static class SignalREndpoints
     {
-        public const string OrderBookUpdate = "OrderBookUpdate";
+        public const string OrderBookUpdate = "OrderBookUpdate_{0}";
     }
 }

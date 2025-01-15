@@ -1,6 +1,8 @@
+using Core.Shared.ApiModels;
 using Core.Shared.Domain.Models;
 using CryptoExchangeBackend.Hubs;
 using CryptoExchangeBackend.Interfaces;
+using CryptoExchangeBackend.Providers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using System.Text.Json;
@@ -12,18 +14,24 @@ namespace CryptoExchangeBackend.Controllers
     public class ExchangeController : ControllerBase
     {
         private readonly IHubContext<OrderBookHub> _hubContext;
-        private readonly IOrderBookProvider _orderBookProvider;
+        private readonly MultiplePriceLevelsOrderBookProvider _mplOrderBookProvider;
 
-        public ExchangeController(IHubContext<OrderBookHub> orderBookHub, IOrderBookProvider orderBookProvider)
+        public ExchangeController(IHubContext<OrderBookHub> orderBookHub, MultiplePriceLevelsOrderBookProvider orderBookProvider)
         {
             this._hubContext = orderBookHub;
-            this._orderBookProvider = orderBookProvider;
+            this._mplOrderBookProvider = orderBookProvider;
         }
 
         [HttpGet("orderBook")]
-        public async Task<IActionResult> GetOrderBook()
+        public async Task<IActionResult> GetOrderBook(int size)
         {
-            var result = await _orderBookProvider.GetOrderBookSnapshot();
+            var (orderBookProvider, updateEndpoint) = _mplOrderBookProvider.DetermineOrderBookProvider(size);
+            var snapshot = await orderBookProvider.GetOrderBookSnapshot();
+            var result = new OrderBookResponse
+            {
+                Snapshot = snapshot,
+                UpdateEndpoint = updateEndpoint
+            };
             return Ok(result);
         }
 

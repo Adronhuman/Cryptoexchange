@@ -1,9 +1,13 @@
-﻿using Core.Shared;
+﻿using Core.Shared.ApiModels;
 using Core.Shared.Domain.Models;
 using Core.Shared.Domain.Operations;
 using Frontend.Client.Settings;
 using Microsoft.AspNetCore.SignalR.Client;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Reflection.Metadata.Ecma335;
+using System.Threading.Channels;
 using System.Web;
 
 namespace Frontend.Client.Services
@@ -13,50 +17,45 @@ namespace Frontend.Client.Services
         private readonly HubConnection _hubConnection;
         private readonly OrderBookApiInfo _apiInfo;
         private readonly HttpClient _httpClient;
-        private readonly OrderBookManager _orderBookManager;
-
-        public event EventHandler<OrderBookDiff> OrderBookUpdate = delegate { };
+        private OrderBookManager _orderBookManager;
+        private List<string> _activeHubMethods;
+        private long CurrentOrderBookTimeStamp;
+        private readonly Channel<OrderBookDiff> _updateChannel;
+        private CancellationTokenSource _subscribeCancellation;
+        
+        public event EventHandler<OrderBookDiff>? OrderBookUpdate;
         public event EventHandler<OrderBook> NewOrderBook = delegate { };
-
-        public List<int> AvailableSizes
-        {
-            get { return _apiInfo.DepthLevels; }
-        }
 
         public OrderBookService(HubConnection hubConnection,
             IHttpClientFactory httpClientFactory,
             OrderBookApiInfo apiInfo)
         {
             _hubConnection = hubConnection;
+            _activeHubMethods = [];
             _apiInfo = apiInfo;
             _httpClient = httpClientFactory.CreateClient("OrderBookHttpClient");
-            _orderBookManager = new OrderBookManager(20);
+            _orderBookManager = new OrderBookManager(100);
+            _updateChannel = Channel.CreateUnbounded<OrderBookDiff>();
         }
 
         // TODO: add error handling
-        public async Task InitializeOrderBookAsync(int size)
+        public async Task SetupOrderBookAsync(int size)
         {
-            var updates = new Queue<OrderBookDiff>();
-            EventHandler<OrderBookDiff> collectUpdate = (e, update) => updates.Enqueue(update);
-            SubscribeToUpdate(collectUpdate);
+            Refresh();
+            var res = await GetOrderBookSnapshot(size);
+            var snapshot = res.Snapshot;
+            var endpointForUpdates = res.UpdateEndpoint;
 
-            await ListenToUpdates(size);
-
-            var snapshot = await GetWholeOrderBook(size);
+            CurrentOrderBookTimeStamp = snapshot.TimeStamp;
+            await ListenToUpdates(endpointForUpdates);
+            
+            _orderBookManager = new OrderBookManager(size);
             _orderBookManager.LoadInitial(snapshot.OrderBook.Bids, snapshot.OrderBook.Asks);
 
-            // Apply any updates from the queue that are newer than the snapshot
-            while (updates.TryDequeue(out var update))
-            {
-                if (update.TimeStamp >= snapshot.TimeStamp)
-                    _orderBookManager.ApplyUpdate(update);
-            }
-
-            UnsubscribeFromUpdates(collectUpdate);
-
-            // Handle all subsequent updates
             SubscribeToUpdate((s, update) =>
             {
+                if (update.TimeStamp <= CurrentOrderBookTimeStamp) return;
+
                 _orderBookManager.ApplyUpdate(update);
                 var newOrderBook = _orderBookManager.GetCurrentBook();
                 NewOrderBook.Invoke(this, newOrderBook);
@@ -65,14 +64,27 @@ namespace Frontend.Client.Services
             NewOrderBook.Invoke(this, _orderBookManager.GetCurrentBook());
         }
 
-        public async Task ListenToUpdates(int size)
+        public async Task ListenToUpdates(string endpoint)
         {
-            _hubConnection.On<OrderBookDiff>(SignalREndpoints.OrderBookUpdate, (diff) =>
+            _hubConnection.On<OrderBookDiff>(endpoint, (diff) =>
             {
-                OrderBookUpdate.Invoke(this, diff);
+                _updateChannel.Writer.TryWrite(diff);
             });
+            _activeHubMethods.Add(endpoint);
 
-            await _hubConnection.StartAsync();
+            if (_hubConnection.State != HubConnectionState.Connected)
+            {
+                await _hubConnection.StartAsync();
+            }
+        }
+
+        private void Refresh()
+        {
+            _subscribeCancellation?.Cancel();
+            if (_hubConnection.State == HubConnectionState.Connected)
+            {
+                _activeHubMethods.ForEach(_hubConnection.Remove);
+            }
         }
 
         public async ValueTask DisposeAsync()
@@ -84,25 +96,37 @@ namespace Frontend.Client.Services
             }
         }
 
-        private async Task<OrderBookSnapshot> GetWholeOrderBook(int size)
+        private async Task<OrderBookResponse> GetOrderBookSnapshot(int size)
         {
             var endpoint = _apiInfo.WholeBookEndpoint;
             var queryArgs = HttpUtility.ParseQueryString(string.Empty);
             queryArgs["size"] = size.ToString();
 
-            var snapshot = await _httpClient.GetFromJsonAsync<OrderBookSnapshot>($"{endpoint}?{queryArgs}");
-            return snapshot;
+            var res = await _httpClient.GetFromJsonAsync<OrderBookResponse>($"{endpoint}?{queryArgs}");
+            return res;
         }
 
         private void SubscribeToUpdate(EventHandler<OrderBookDiff> handler)
         {
-            OrderBookUpdate += handler;
-        }
+            OrderBookUpdate = handler;
 
-        private void UnsubscribeFromUpdates(EventHandler<OrderBookDiff> handler)
-        {
-            OrderBookUpdate -= handler;
-        }
+            _subscribeCancellation = new CancellationTokenSource();
+            _subscribeCancellation.Token.Register(() =>
+            {
+                OrderBookUpdate = null;
+            });
 
+            Task.Run(async () =>
+            {
+                while (!_subscribeCancellation.Token.IsCancellationRequested)
+                {
+                    var update = await _updateChannel.Reader.ReadAsync(_subscribeCancellation.Token);
+                    if (update != null)
+                    {
+                        OrderBookUpdate?.Invoke(this, update);
+                    }
+                }
+            });
+        }
     }
 }

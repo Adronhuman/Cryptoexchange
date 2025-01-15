@@ -18,16 +18,16 @@ namespace CryptoExchangeBackend.Providers.Binance
         public decimal Quantity { get; set; }
     }
 
-    public class DepthUpdateStreamEvent
+    public class UpdateStreamEvent
     {
         [JsonPropertyName("stream")]
         public string Stream { get; set; }
 
         [JsonPropertyName("data")]
-        public UpdateData Data { get; set; }
+        public Changes Data { get; set; }
     }
 
-    public class UpdateData
+    public class Changes
     {
         [JsonPropertyName("e")]
         public string EventType { get; set; }

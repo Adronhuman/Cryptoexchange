@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
+using static Core.Shared.Constants;
 
 namespace CryptoExchangeBackend.Providers.Binance
 {
@@ -10,17 +11,20 @@ namespace CryptoExchangeBackend.Providers.Binance
     {
         private readonly string _baseEndpoint = "https://api.binance.com/api/v3";
         private const string WebSocketUri = $"wss://stream.binance.com/stream?streams={"btceur"}@depth";
-
+        private const int LIMIT = 100;
         private readonly IHttpClientFactory _httpClientFactory;
+
+        private event EventHandler<Changes> UpdateStreamEvent = delegate { };
 
         public ApiClient(IHttpClientFactory httpClientFactory)
         {
             _httpClientFactory = httpClientFactory;
+            Task.Run(ReadStream);
         }
 
         public async Task<OrderBook> GetOrderBook()
         {
-            var endpoint = $"{_baseEndpoint}/depth?symbol=BTCEUR&limit=5";
+            var endpoint = $"{_baseEndpoint}/depth?symbol=BTCEUR&limit={LIMIT}";
 
             var httpClient = _httpClientFactory.CreateClient();
             // TODO: add error handling
@@ -35,7 +39,12 @@ namespace CryptoExchangeBackend.Providers.Binance
             return model;
         }
 
-        public async void PullUpdates(ChannelWriter<UpdateData> channel)
+        public async void PullUpdates(Action<Changes> onUpdate) 
+        {
+            UpdateStreamEvent += (s, data) => onUpdate(data);
+        }
+
+        public async void ReadStream()
         {
             using var client = new ClientWebSocket();
             var cancellationToken = new CancellationToken();
@@ -57,13 +66,12 @@ namespace CryptoExchangeBackend.Providers.Binance
 
                     var message = Encoding.UTF8.GetString(buffer, 0, receiveResult.Count);
 
-                    var updateData = JsonSerializer.Deserialize<DepthUpdateStreamEvent>(message, new JsonSerializerOptions
+                    var updateData = JsonSerializer.Deserialize<UpdateStreamEvent>(message, new JsonSerializerOptions
                     {
                         Converters = { new OrderConverter() }
                     });
 
-                    Trace.TraceInformation("wrote to channel");
-                    await channel.WriteAsync(updateData.Data);
+                    UpdateStreamEvent.Invoke(this, updateData.Data);
                 }
                 catch { }
             }

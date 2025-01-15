@@ -1,5 +1,6 @@
 using CryptoExchangeBackend.Hubs;
 using CryptoExchangeBackend.Interfaces;
+using CryptoExchangeBackend.Providers;
 using CryptoExchangeBackend.Providers.Binance;
 using CryptoExchangeBackend.Workers;
 
@@ -9,8 +10,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSignalR();
 builder.Services.AddHttpClient();
 
-builder.Services.AddSingleton<IOrderBookProvider, OrderBookProvider>();
-builder.Services.AddHostedService<StreamingDataWorker>();
+builder.Services.AddSingleton<ApiClient>();
+builder.Services.AddSingleton<MultiplePriceLevelsOrderBookProvider>();
+builder.Services.AddHostedService<BinanceWorker>();
 
 builder.Services.AddControllers();
 
@@ -33,6 +35,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+//app.RegisterBinanceWorkers();
 
 app.UseHttpsRedirection();
 

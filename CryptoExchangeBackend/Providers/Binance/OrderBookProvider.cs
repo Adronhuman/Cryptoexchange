@@ -1,8 +1,12 @@
 ﻿using Core.Shared.Domain.Models;
 using Core.Shared.Domain.Operations;
+using Core.Shared.Helpers;
 using CryptoExchangeBackend.Interfaces;
 using System.Diagnostics;
 using System.Threading.Channels;
+using static Core.Shared.Constants;
+using DomainOrderBook = Core.Shared.Domain.Models.OrderBook;
+using DomainOrder = Core.Shared.Domain.Models.Order;
 
 namespace CryptoExchangeBackend.Providers.Binance
 {
@@ -10,28 +14,23 @@ namespace CryptoExchangeBackend.Providers.Binance
 
     public class OrderBookProvider : IOrderBookProvider
     {
+        private readonly int OrderBookSize;
         private readonly ApiClient _apiClient;
         private readonly OrderBookManager _orderBookManager;
-
-        private readonly ChannelReader<UpdateData> _updateQueue;
-
-        private OrderBookSnapshot CurrentOrderBook { get; set; }
+        private readonly ChannelReader<Changes> _updateQueue;
+        private OrderBookSnapshot LastSnapshot { get; set; }
 
         public event OrderBookUpdatedEventHandler Updated = delegate { };
 
-        public OrderBookProvider(IHttpClientFactory httpClientFactory)
+        public OrderBookProvider(ApiClient apiClient, OrderBookSize size)
         {
-            var channel = Channel.CreateUnbounded<UpdateData>();
-            _apiClient = new ApiClient(httpClientFactory);
+            var channel = Channel.CreateUnbounded<Changes>();
+            _apiClient = apiClient;
             _updateQueue = channel.Reader;
-            _apiClient.PullUpdates(channel.Writer);
+            _apiClient.PullUpdates(async (u) => await channel.Writer.WriteAsync(u));
 
-            _orderBookManager = new OrderBookManager(20);
-        }
-
-        public Task<OrderBookSnapshot> GetOrderBookSnapshot()
-        {
-            return Task.FromResult(CurrentOrderBook);
+            OrderBookSize = (int) size;
+            _orderBookManager = new OrderBookManager(OrderBookSize);
         }
 
         public void Subscribe(Action<OrderBookDiff, OrderBookSnapshot> updateHandler)
@@ -39,45 +38,116 @@ namespace CryptoExchangeBackend.Providers.Binance
             Updated += (s, update, snapshot) => updateHandler(update, snapshot);
         }
 
-        public async Task RefreshAndListenChanges(CancellationToken cancellationToken)
+        public Task<OrderBookSnapshot> GetOrderBookSnapshot()
         {
-            Trace.TraceInformation("RefreshAndListenChanges fired");
-            var orderBook = Adapter.ToDomain(await _apiClient.GetOrderBook());
-            _orderBookManager.LoadInitial(orderBook.Bids, orderBook.Asks);
-            CurrentOrderBook = OrderBookSnapshot.Create(orderBook);
-
-            var bids = new HashSet<decimal>(orderBook.Bids.Select(o => o.Price));
-            var asks = new HashSet<decimal>(orderBook.Asks.Select(o => o.Price));
-
-            await Task.Run(async () =>
-            {
-                while (true)
-                {
-                    var update = await _updateQueue.ReadAsync();
-                    Trace.TraceInformation("read from channel");
-                    var diffBuilder = new OrderBookDiffBuilder();
-                    foreach (var bid in update.Bids)
-                    {
-                        var changeType = CalculateChange(bids, bid);
-                        diffBuilder.BidChange(bid.Price, bid.Quantity, changeType);
-                    }
-                    foreach (var ask in update.Asks)
-                    {
-                        var changeType = CalculateChange(asks, ask);
-                        diffBuilder.AskChange(ask.Price, ask.Quantity, changeType);
-                    }
-                    var diff = diffBuilder.GetDiff();
-
-                    _orderBookManager.ApplyUpdate(diff);
-                    var updatedBook = _orderBookManager.GetCurrentBook();
-                    CurrentOrderBook = OrderBookSnapshot.Create(updatedBook);
-
-                    Updated.Invoke(this, diff, CurrentOrderBook);
-                }
-            }, cancellationToken);
+            return Task.FromResult(LastSnapshot);
         }
 
-        private static ChangeType CalculateChange(HashSet<decimal> prices, Order order)
+        public async Task RefreshAndListenChanges(CancellationToken cancellationToken)
+        {
+            var binanceModel = await _apiClient.GetOrderBook();
+            var orderBook = Adapter.ToDomain(binanceModel);
+
+            // Before moving to the new snapshot
+            // We need to check the differences and notify clients
+            if (LastSnapshot != null)
+            {
+                var mismatch = CalculateDifference(LastSnapshot.OrderBook, binanceModel);
+                LastSnapshot = OrderBookSnapshot.Create(orderBook);
+                Updated.Invoke(this, mismatch, LastSnapshot);
+            }
+            else
+            {
+                LastSnapshot = OrderBookSnapshot.Create(orderBook);
+                Updated.Invoke(this, new OrderBookDiffBuilder().GetDiff(), LastSnapshot);
+            }
+
+            _orderBookManager.LoadInitial(orderBook.Bids, orderBook.Asks);
+
+            var bidPrices = GetPricesSet(orderBook.Bids, OrderBookSize, desc: true);
+            var askPrices = GetPricesSet(orderBook.Bids, OrderBookSize);
+
+            var _ = Task.Run(async () =>
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    try
+                    {
+                        var update = await _updateQueue.ReadAsync();
+                        if (binanceModel.LastUpdateId > update.LastUpdateId)
+                        {
+                            continue;
+                        }
+                        var diffBuilder = new OrderBookDiffBuilder();
+                        update.Bids.ForEach(bid => CollectChange(diffBuilder.BidChange, bidPrices, bid));
+                        update.Asks.ForEach(ask => CollectChange(diffBuilder.AskChange, askPrices, ask));
+
+                        // remove entries that exceed the current size
+                        bidPrices.Skip(OrderBookSize)
+                            .ToList()
+                            .ForEach(price => CollectRemoval(diffBuilder.BidChange, bidPrices, price));
+                        askPrices.Skip(OrderBookSize)
+                            .ToList()
+                            .ForEach(price => CollectRemoval(diffBuilder.AskChange, askPrices, price));
+
+                        var diff = diffBuilder.GetDiff();
+
+                        _orderBookManager.ApplyUpdate(diff);
+                        var updatedBook = _orderBookManager.GetCurrentBook();
+                        LastSnapshot = OrderBookSnapshot.Create(updatedBook);
+
+                        Updated.Invoke(this, diff, LastSnapshot);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Crashing the service is not worth a single missed message — simply log the error.
+                        Trace.TraceError($"OrderBookProvider[{OrderBookSize}]: Failed to process update with {ex}");
+                    }
+                }
+            }, CancellationToken.None);
+        }
+
+        // Think of this as a migration plan.
+        // Clients need not only information about new or updated entries, 
+        // but also instructions on how to handle the existing ones.
+        private OrderBookDiff CalculateDifference(DomainOrderBook currentBook, OrderBook newBook)
+        {
+            var diffBuilder = new OrderBookDiffBuilder();
+
+            var currentBidPrices = GetPricesSet(currentBook.Bids, OrderBookSize, desc:true);
+            var currentAskPrices = GetPricesSet(currentBook.Asks, OrderBookSize);
+            var newBidPrices = GetPricesSet(newBook.Bids, OrderBookSize, desc: true);
+            var newAskPrices = GetPricesSet(newBook.Asks, OrderBookSize);
+
+            // The logic for entries from the new order book remains the same as for stream updates
+            newBook.Bids.ForEach(newBid => CollectChange(diffBuilder.BidChange, currentBidPrices, newBid));
+            newBook.Asks.ForEach(newAsk => CollectChange(diffBuilder.AskChange, currentAskPrices, newAsk));
+
+            // but we need to create a removal request for older entries if they are no longer present in the new book
+            currentBidPrices
+                .Where(price => !newBidPrices.Contains(price))
+                .ToList().ForEach(price => CollectRemoval(diffBuilder.BidChange, currentBidPrices, price));
+
+            currentAskPrices
+                .Where(price => !newAskPrices.Contains(price))
+                .ToList().ForEach(price => CollectRemoval(diffBuilder.AskChange, currentAskPrices, price));
+
+            return diffBuilder.GetDiff();
+        }
+
+        private static void CollectRemoval(Action<decimal, decimal, ChangeType> apply, SortedSet<decimal> prices, decimal price)
+        {
+            prices.Remove(price);
+            apply(price, 0, ChangeType.Deleted);
+        }
+
+        private static void CollectChange(Action<decimal, decimal, ChangeType> apply, SortedSet<decimal> prices, Order order)
+        {
+            var changeType = DetermineChange(prices, order);
+            apply(order.Price, order.Quantity, changeType);
+        }
+
+        private static ChangeType DetermineChange(SortedSet<decimal> prices, Order order)
         {
             if (order.Quantity == 0)
             {
@@ -94,5 +164,17 @@ namespace CryptoExchangeBackend.Providers.Binance
                 return ChangeType.Added;
             }
         }
+
+        private static SortedSet<decimal> GetPricesSet(IEnumerable<Order> orders, int size, bool desc=false)
+        {
+            var topN = orders.OrderBy(o => desc ? -o.Price: o.Price).Take(size).Select(o => o.Price);
+            return new(topN, desc ? new DescendingComparer<decimal>() : null);
+        }
+        private static SortedSet<decimal> GetPricesSet(IEnumerable<DomainOrder> orders, int size, bool desc = false)
+        {
+            var topN = orders.OrderBy(o => desc ? -o.Price : o.Price).Take(size).Select(o => o.Price);
+            return new(topN, desc ? new DescendingComparer<decimal>() : null);
+        }
+
     }
 }

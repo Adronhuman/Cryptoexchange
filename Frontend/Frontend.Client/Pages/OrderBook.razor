@@ -9,12 +9,20 @@
 
 <h1>Order book</h1>
 
-@if (Bids == null || Asks == null)
+@if (Bids.Count == 0 && Asks.Count == 0)
 {
     <p><em>Loading...</em></p>
 }
 else
-{
+{   
+    <label>Size</label>
+    <select value="@SelectedSize" @onchange="OnSizeChanged" class="form-select">
+        @foreach (var size in availableSizes)
+        {
+            <option value="@size">@size</option>
+        }
+    </select>
+
     <div class="order-book">
         <div class="order-book-column">
             <h4>Bids</h4>
@@ -61,9 +69,11 @@ else
 }
 
 @code {
+    private List<int> availableSizes = [5, 10, 20];
+    private int SelectedSize { get; set; } = 5;
 
-    private List<Order> Bids;
-    private List<Order> Asks;
+    private List<Order> Bids = [];
+    private List<Order> Asks = [];
 
 
     protected override async Task OnInitializedAsync()
@@ -71,9 +81,32 @@ else
         OrderBookService.NewOrderBook += (s, orderBook) => {
             Bids = orderBook.Bids.ToList();
             Asks = orderBook.Asks.ToList();
-            StateHasChanged();
+            InvokeAsync(StateHasChanged);
         };
 
-        await OrderBookService.InitializeOrderBookAsync(10);
+        await Refresh();
+        ConfigurePeriodicRefresh();
+    }
+
+    private async Task Refresh(){
+        await OrderBookService.SetupOrderBookAsync(SelectedSize);
+    }
+
+    private async void OnSizeChanged(ChangeEventArgs e)
+    {
+        SelectedSize = int.Parse(e.Value.ToString());
+        await Refresh();
+    }
+
+    private void ConfigurePeriodicRefresh()
+    {
+        Task.Run(async () =>
+        {
+            while (true)
+            {   
+                await Refresh();
+                await Task.Delay(30_000);
+            }
+        });
     }
 }
