@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "Back & Front",
+    "Projects": [
+      {
+        "Path": "CryptoExchangeBackend\\CryptoExchangeBackend.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "Frontend\\Frontend\\Frontend.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]
