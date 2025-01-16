@@ -13,5 +13,15 @@
                 OrderBook = orderBook
             };
         }
+
+        public static OrderBookSnapshot CreateDummy()
+        {
+            return new OrderBookSnapshot
+            {
+                // Any update should be considered more up-to-date than the absence of data
+                TimeStamp = 0,
+                OrderBook = new OrderBook { Bids = [], Asks = [] }
+            };
+        }
     }
 }

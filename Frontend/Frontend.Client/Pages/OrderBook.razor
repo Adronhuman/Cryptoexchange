@@ -64,8 +64,11 @@
 
     private async void OnSizeChanged(ChangeEventArgs e)
     {
-        SelectedSize = int.Parse(e.Value.ToString());
-        await Refresh();
+        if (int.TryParse(e.Value?.ToString(), out var val))
+        {
+            SelectedSize = val;
+            await Refresh();
+        }
     }
 
     private void ConfigurePeriodicRefresh()

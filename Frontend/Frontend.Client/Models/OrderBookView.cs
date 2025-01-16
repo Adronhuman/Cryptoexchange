@@ -1,4 +1,6 @@
-﻿using Core.Shared.Domain.Models;
+﻿#nullable disable
+
+using Core.Shared.Domain.Models;
 
 namespace Frontend.Client.Models
 {

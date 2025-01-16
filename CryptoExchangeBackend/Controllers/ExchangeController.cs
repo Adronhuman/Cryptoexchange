@@ -1,8 +1,7 @@
 using Core.Shared.ApiModels;
-using CryptoExchangeBackend.Hubs;
+using Core.Shared.Domain.Models;
 using CryptoExchangeBackend.Impl.Providers;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 
 namespace CryptoExchangeBackend.Controllers
 {
@@ -12,9 +11,9 @@ namespace CryptoExchangeBackend.Controllers
     {
         private readonly MultiplePriceLevelsOrderBookProvider _mplOrderBookProvider;
 
-        public ExchangeController(IHubContext<OrderBookHub> orderBookHub, MultiplePriceLevelsOrderBookProvider orderBookProvider)
+        public ExchangeController(MultiplePriceLevelsOrderBookProvider orderBookProvider)
         {
-            this._mplOrderBookProvider = orderBookProvider;
+            _mplOrderBookProvider = orderBookProvider;
         }
 
         [HttpGet("orderBook")]
@@ -22,12 +21,12 @@ namespace CryptoExchangeBackend.Controllers
         {
             var (orderBookProvider, updateEndpoint) = _mplOrderBookProvider.DetermineOrderBookProvider(size);
             var snapshot = await orderBookProvider.GetOrderBookSnapshot();
-            var result = new OrderBookResponse
+
+            return Ok(new OrderBookResponse
             {
-                Snapshot = snapshot,
+                Snapshot = snapshot ?? OrderBookSnapshot.CreateDummy(),
                 UpdateEndpoint = updateEndpoint
-            };
-            return Ok(result);
+            });
         }
     }
 }

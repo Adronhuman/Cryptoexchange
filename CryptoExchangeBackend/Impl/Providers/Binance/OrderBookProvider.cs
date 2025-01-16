@@ -1,12 +1,9 @@
 ﻿using Core.Shared.Domain.Models;
 using Core.Shared.Domain.Operations;
-using Core.Shared.Helpers;
 using CryptoExchangeBackend.Interfaces;
 using System.Diagnostics;
 using System.Threading.Channels;
 using static Core.Shared.Constants;
-using DomainOrder = Core.Shared.Domain.Models.Order;
-using DomainOrderBook = Core.Shared.Domain.Models.OrderBook;
 
 namespace CryptoExchangeBackend.Impl.Providers.Binance
 {
@@ -18,7 +15,7 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
         private readonly ApiClient _apiClient;
         private readonly OrderBookManager _orderBookManager;
         private readonly ChannelReader<Changes> _updateQueue;
-        private OrderBookSnapshot LastSnapshot { get; set; }
+        private OrderBookSnapshot? LastSnapshot { get; set; }
 
         public event OrderBookUpdatedEventHandler Updated = delegate { };
 
@@ -38,7 +35,7 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
             Updated += (s, update, snapshot) => updateHandler(update, snapshot);
         }
 
-        public Task<OrderBookSnapshot> GetOrderBookSnapshot()
+        public Task<OrderBookSnapshot?> GetOrderBookSnapshot()
         {
             return Task.FromResult(LastSnapshot);
         }
@@ -46,13 +43,28 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
         public async Task RefreshAndListenChanges(CancellationToken cancellationToken)
         {
             var binanceModel = await _apiClient.GetOrderBook();
+            if (binanceModel == null)
+            {
+                // nothing we can do here - wait for another RefreshAndListenChanges
+                Trace.TraceWarning("Failed to get orderBookSnapshot from Binance REST endpoint");
+                return;
+            }
+
             var orderBook = Adapter.ToDomain(binanceModel);
+
+            var changeManager = new ChangeManager<Binance.Order>(
+                SelectPrice: o => o.Price,
+                SelectAmount: o => o.Quantity,
+                ClassifyChange: DetermineChange,
+                bookSize: OrderBookSize
+            );
 
             // Before moving to the new snapshot
             // We need to check the differences and notify clients
             if (LastSnapshot != null)
             {
-                var mismatch = CalculateDifference(LastSnapshot.OrderBook, binanceModel);
+                changeManager.Prepare(LastSnapshot.OrderBook.Bids, LastSnapshot.OrderBook.Asks);
+                var mismatch = changeManager.CalculateDifference(binanceModel.Bids, binanceModel.Asks);
                 LastSnapshot = OrderBookSnapshot.Create(orderBook);
                 Updated.Invoke(this, mismatch, LastSnapshot);
             }
@@ -62,10 +74,8 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
                 Updated.Invoke(this, new OrderBookDiffBuilder().GetDiff(), LastSnapshot);
             }
 
+            changeManager.Prepare(binanceModel.Bids, binanceModel.Asks);
             _orderBookManager.LoadInitial(orderBook.Bids, orderBook.Asks);
-
-            var bidPrices = GetPricesSet(orderBook.Bids, OrderBookSize, desc: true);
-            var askPrices = GetPricesSet(orderBook.Bids, OrderBookSize);
 
             var _ = Task.Run(async () =>
             {
@@ -78,24 +88,11 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
                         {
                             continue;
                         }
-                        var diffBuilder = new OrderBookDiffBuilder();
-                        update.Bids.ForEach(bid => CollectChange(diffBuilder.BidChange, bidPrices, bid));
-                        update.Asks.ForEach(ask => CollectChange(diffBuilder.AskChange, askPrices, ask));
-
-                        // remove entries that exceed the current size
-                        bidPrices.Skip(OrderBookSize)
-                            .ToList()
-                            .ForEach(price => CollectRemoval(diffBuilder.BidChange, bidPrices, price));
-                        askPrices.Skip(OrderBookSize)
-                            .ToList()
-                            .ForEach(price => CollectRemoval(diffBuilder.AskChange, askPrices, price));
-
-                        var diff = diffBuilder.GetDiff();
-
+                        var diff = changeManager.ProcessUpdate(update.Bids, update.Asks);
                         _orderBookManager.ApplyUpdate(diff);
+
                         var updatedBook = _orderBookManager.GetCurrentBook();
                         LastSnapshot = OrderBookSnapshot.Create(updatedBook);
-
                         Updated.Invoke(this, diff, LastSnapshot);
                     }
                     catch (Exception ex)
@@ -107,51 +104,12 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
             }, CancellationToken.None);
         }
 
-        // Think of this as a migration plan.
-        // Clients need not only information about new or updated entries, 
-        // but also instructions on how to handle the existing ones.
-        private OrderBookDiff CalculateDifference(DomainOrderBook currentBook, OrderBook newBook)
-        {
-            var diffBuilder = new OrderBookDiffBuilder();
-
-            var currentBidPrices = GetPricesSet(currentBook.Bids, OrderBookSize, desc: true);
-            var currentAskPrices = GetPricesSet(currentBook.Asks, OrderBookSize);
-            var newBidPrices = GetPricesSet(newBook.Bids, OrderBookSize, desc: true);
-            var newAskPrices = GetPricesSet(newBook.Asks, OrderBookSize);
-
-            // The logic for entries from the new order book remains the same as for stream updates
-            newBook.Bids.ForEach(newBid => CollectChange(diffBuilder.BidChange, currentBidPrices, newBid));
-            newBook.Asks.ForEach(newAsk => CollectChange(diffBuilder.AskChange, currentAskPrices, newAsk));
-
-            // but we need to create a removal request for older entries if they are no longer present in the new book
-            currentBidPrices
-                .Where(price => !newBidPrices.Contains(price))
-                .ToList().ForEach(price => CollectRemoval(diffBuilder.BidChange, currentBidPrices, price));
-
-            currentAskPrices
-                .Where(price => !newAskPrices.Contains(price))
-                .ToList().ForEach(price => CollectRemoval(diffBuilder.AskChange, currentAskPrices, price));
-
-            return diffBuilder.GetDiff();
-        }
-
-        private static void CollectRemoval(Action<decimal, decimal, ChangeType> apply, SortedSet<decimal> prices, decimal price)
-        {
-            prices.Remove(price);
-            apply(price, 0, ChangeType.Deleted);
-        }
-
-        private static void CollectChange(Action<decimal, decimal, ChangeType> apply, SortedSet<decimal> prices, Order order)
-        {
-            var changeType = DetermineChange(prices, order);
-            apply(order.Price, order.Quantity, changeType);
-        }
-
-        private static ChangeType DetermineChange(SortedSet<decimal> prices, Order order)
+        // These rules are designed to be as decoupled as possible.
+        // They are specific to the provider and the API at any given time.
+        private static ChangeType DetermineChange(ISet<decimal> prices, Order order)
         {
             if (order.Quantity == 0)
             {
-                prices.Remove(order.Price);
                 return ChangeType.Deleted;
             }
             else if (prices.Contains(order.Price))
@@ -160,21 +118,8 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
             }
             else
             {
-                prices.Add(order.Price);
                 return ChangeType.Added;
             }
         }
-
-        private static SortedSet<decimal> GetPricesSet(IEnumerable<Order> orders, int size, bool desc = false)
-        {
-            var topN = orders.OrderBy(o => desc ? -o.Price : o.Price).Take(size).Select(o => o.Price);
-            return new(topN, desc ? new DescendingComparer<decimal>() : null);
-        }
-        private static SortedSet<decimal> GetPricesSet(IEnumerable<DomainOrder> orders, int size, bool desc = false)
-        {
-            var topN = orders.OrderBy(o => desc ? -o.Price : o.Price).Take(size).Select(o => o.Price);
-            return new(topN, desc ? new DescendingComparer<decimal>() : null);
-        }
-
     }
 }

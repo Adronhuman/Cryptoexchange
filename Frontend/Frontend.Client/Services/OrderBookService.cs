@@ -33,15 +33,21 @@ namespace Frontend.Client.Services
             _httpClient = httpClientFactory.CreateClient("OrderBookHttpClient");
             _orderBookManager = new OrderBookManager(100);
             _updateChannel = Channel.CreateUnbounded<OrderBookDiff>();
+            _subscribeCancellation = new CancellationTokenSource();
         }
 
-        // TODO: add error handling
         public async Task SetupOrderBookAsync(int size)
         {
             Refresh();
-            var res = await GetOrderBookSnapshot(size);
-            var snapshot = res.Snapshot;
-            var endpointForUpdates = res.UpdateEndpoint;
+            var apiResponse = await TryGetOrderBookInfo(size);
+            if (apiResponse == null)
+            {
+                // The page will attempt to call this method again soon, hoping for a successful response
+                return;
+            }
+
+            var snapshot = apiResponse.Snapshot;
+            var endpointForUpdates = apiResponse.UpdateEndpoint;
 
             CurrentOrderBookTimeStamp = snapshot.TimeStamp;
             await ListenToUpdates(endpointForUpdates);
@@ -102,9 +108,8 @@ namespace Frontend.Client.Services
 
             if (amountToCover == 0) return totalPrice;
 
-            // Warning: a little bit of voodoo dance;
-            // In the long run trade-off should be reconsidered
-            // for now - cover the remaining amount using price from last known ask
+            // Warning: This is a temporary solution ("voodoo dance") that should be revisited in the future.
+            // For now, the remaining amount is covered using the price of the last known ask.
             var biggestPrice = topAsks.Last().Price;
             totalPrice += amountToCover * biggestPrice;
             return totalPrice;
@@ -128,7 +133,7 @@ namespace Frontend.Client.Services
             }
         }
 
-        private async Task<OrderBookResponse> GetOrderBookSnapshot(int size)
+        private async Task<OrderBookResponse?> TryGetOrderBookInfo(int size)
         {
             var endpoint = _apiInfo.WholeBookEndpoint;
             var queryArgs = HttpUtility.ParseQueryString(string.Empty);

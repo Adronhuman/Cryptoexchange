@@ -4,6 +4,7 @@ using CryptoExchangeBackend.Impl.Providers;
 using CryptoExchangeBackend.Impl.Providers.Binance;
 using CryptoExchangeBackend.Interfaces;
 using CryptoExchangeBackend.Workers;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,15 +16,20 @@ builder.Services.AddSingleton<ApiClient>();
 builder.Services.AddSingleton<MultiplePriceLevelsOrderBookProvider>();
 builder.Services.AddSingleton<IOrderBookLogger>(sp =>
 {
+    var noopLogger = new FallbackLogger();
     try
     {
         var connectionString = builder.Configuration.GetConnectionString("MongoDb");
-        return new MongoOrderBookLogger(connectionString);
+        if (connectionString != null)
+        {
+            return new MongoOrderBookLogger(connectionString);
+        }
     }
-    catch
-    {
-        return new FallbackLogger();
-    }
+    // logging isn't crucial for application
+    catch { }
+
+    Trace.TraceWarning("Failed to connect to MongoDB. Logs will not be stored.");
+    return noopLogger;
 });
 
 builder.Services.AddControllers();
@@ -31,25 +37,23 @@ builder.Services.AddHostedService<BinanceWorker>();
 
 builder.Services.AddCors(options =>
 {
+    var frontendOrigin = builder.Configuration["FrontendOrigin"];
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy
-        //.SetIsOriginAllowed((host) => true)
-        .WithOrigins("https://localhost:7103", "http://localhost:5002")
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials();
-        //policy.WithOrigins("https://localhost:7103", "http://localhost:5002")
-        //      .AllowAnyHeader()
-        //      .AllowAnyMethod();
+        if (frontendOrigin != null)
+        {
+            policy
+            .WithOrigins(frontendOrigin)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+        }
     });
 });
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-//app.RegisterBinanceWorkers();
-
 app.UseHttpsRedirection();
 
 app.UseAuthorization();

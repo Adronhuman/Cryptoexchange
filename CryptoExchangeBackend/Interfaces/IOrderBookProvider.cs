@@ -4,7 +4,7 @@ namespace CryptoExchangeBackend.Interfaces
 {
     public interface IOrderBookProvider
     {
-        Task<OrderBookSnapshot> GetOrderBookSnapshot();
+        Task<OrderBookSnapshot?> GetOrderBookSnapshot();
         void Subscribe(Action<OrderBookDiff, OrderBookSnapshot> updateHandler);
         Task RefreshAndListenChanges(CancellationToken token);
     }

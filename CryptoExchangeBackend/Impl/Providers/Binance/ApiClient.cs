@@ -1,4 +1,5 @@
-﻿using System.Net.WebSockets;
+﻿using System.Diagnostics;
+using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 
@@ -19,7 +20,7 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
             Task.Run(ReadStream);
         }
 
-        public async Task<OrderBook> GetOrderBook()
+        public async Task<OrderBook?> GetOrderBook()
         {
             var endpoint = $"{_baseEndpoint}/depth?symbol=BTCEUR&limit={LIMIT}";
 
@@ -36,22 +37,41 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
             return model;
         }
 
-        public async void PullUpdates(Action<Changes> onUpdate)
+        public void PullUpdates(Action<Changes> onUpdate)
         {
             UpdateStreamEvent += (s, data) => onUpdate(data);
         }
 
-        public async void ReadStream()
+        public async Task ReadStream()
+        {
+            // In the best case, the connection will be closed after 24 hours
+            // However, we start fresh with each attempt in case of any crashes
+            while (true)
+            {
+                Trace.TraceInformation("Initiating connection to the update stream: opening the WebSocket connection.");
+                try
+                {
+                    await Connect();
+                }
+                catch(Exception ex)
+                {
+                    Trace.TraceError($"Websocket client crashed: {ex}");
+                }
+            }
+        }
+
+        public async Task Connect() 
         {
             using var client = new ClientWebSocket();
             var cancellationToken = new CancellationToken();
 
             await client.ConnectAsync(new Uri(WebSocketUri), cancellationToken);
 
-            // need to handle case when message is bigger
+            // We might need to handle larger messages in the future,
+            // but 20 KB is sufficient for now
             var buffer = new byte[1024 * 20];
 
-            WebSocketReceiveResult receiveResult = null;
+            WebSocketReceiveResult? receiveResult = null;
 
             while (client.State == WebSocketState.Open
                 && (receiveResult == null || !receiveResult.CloseStatus.HasValue))
@@ -68,9 +88,20 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
                         Converters = { new OrderConverter() }
                     });
 
-                    UpdateStreamEvent.Invoke(this, updateData.Data);
+                    if (updateData != null)
+                    {
+                        UpdateStreamEvent.Invoke(this, updateData.Data);
+                    }
+                    else
+                    {
+                        Trace.TraceWarning("Got empty message from binance stream, or couldn't deserialize data properly");
+                        continue;
+                    }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Trace.TraceError($"Update stream processing error: {ex}");
+                }
             }
         }
     }

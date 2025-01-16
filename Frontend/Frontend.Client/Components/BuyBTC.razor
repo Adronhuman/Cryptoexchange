@@ -8,7 +8,6 @@
         <input type="number" @oninput="Debounce" step="0.0001" id="btc-amount" placeholder="e.g., 0.01" />
     </div>
     <div class="price-info">
-        <p>btc amounnt: @BtcAmount</p>
         <p>Total Price: @FormatCurrencyInEUR(TotalPrice)</p>
     </div>
 </div>
@@ -16,25 +15,27 @@
 
 @code {
     [Parameter]
-    public OrderBookService OrderBookService { get; set; }
+    public required OrderBookService OrderBookService { get; set; }
 
-    private CancellationTokenSource TypingInProcessCancellation;
+    private CancellationTokenSource? TypingInProcessCancellation;
     private decimal BtcAmount = 0;
     private decimal TotalPrice = 0;
 
-    protected async override Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
         OrderBookService.NewOrderBook += (s, ob) =>
         {
             RecalculatePrice();
         };
+        return Task.CompletedTask;
     }
 
     // strange version of setTimeout (not a lot of alternatives)
     private async Task Debounce(ChangeEventArgs e)
     {
         TypingInProcessCancellation?.Cancel();
-        if (e.Value.ToString() == string.Empty)
+        var stringValue = e.Value?.ToString();
+        if (string.IsNullOrEmpty(stringValue))
         {
             BtcAmount = TotalPrice = 0;
             return;
@@ -44,7 +45,7 @@
         var token = TypingInProcessCancellation.Token;
         try
         {
-            BtcAmount = decimal.Parse(e.Value.ToString());
+            BtcAmount = decimal.Parse(stringValue);
             await Task.Delay(500, token);
             if (!token.IsCancellationRequested) {
                 RecalculatePrice();
