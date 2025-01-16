@@ -93,15 +93,13 @@ namespace CryptoExchangeBackend.Workers
             {
                 try
                 {
-                    Trace.TraceInformation($"Timer is alive");
                     _cancellation.Cancel();
                     _cancellation = new CancellationTokenSource();
                     fnc(_cancellation.Token);
-                    Trace.TraceInformation("Looks finished");
                 }
                 catch (Exception ex)
                 {
-                    Trace.TraceError($"Error in timer callback: {ex.Message}");
+                    Trace.TraceError($"Error in CancelAndRestartTask: {ex.Message}");
                 }
             }, null, 0, 6000 * 1000);
         }
