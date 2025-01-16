@@ -3,11 +3,11 @@
     "Name": "Back & Front",
     "Projects": [
       {
-        "Path": "CryptoExchangeBackend\\CryptoExchangeBackend.csproj",
+        "Path": "Frontend\\Frontend\\Frontend.csproj",
         "Action": "Start"
       },
       {
-        "Path": "Frontend\\Frontend\\Frontend.csproj",
+        "Path": "OrderBookMonitorBackend\\OrderBookMonitorBackend.csproj",
         "Action": "Start"
       }
     ]
