@@ -3,7 +3,7 @@
     "Name": "Back & Front",
     "Projects": [
       {
-        "Path": "Frontend\\Frontend\\Frontend.csproj",
+        "Path": "Frontend\\Frontend\\Frontend.Host.csproj",
         "Action": "Start"
       },
       {

@@ -1,6 +1,6 @@
 using Frontend.Client.DI;
 using Frontend.Client.Settings;
-using Frontend.Components;
+using Frontend.Host.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 

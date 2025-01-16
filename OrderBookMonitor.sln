@@ -5,7 +5,7 @@ VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Shared", "Core.Shared\Core.Shared.csproj", "{A3C3E6C9-8048-4A23-A163-3663A115658F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Frontend", "Frontend\Frontend\Frontend.csproj", "{259879D2-1BBD-464A-868B-C372A3D9F0B5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Frontend.Host", "Frontend\Frontend\Frontend.Host.csproj", "{259879D2-1BBD-464A-868B-C372A3D9F0B5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Frontend.Client", "Frontend\Frontend.Client\Frontend.Client.csproj", "{3182C07B-32B9-4B56-AA35-A1B172265504}"
 EndProject
