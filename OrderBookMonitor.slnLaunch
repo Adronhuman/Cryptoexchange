@@ -3,11 +3,11 @@
     "Name": "Back & Front",
     "Projects": [
       {
-        "Path": "Frontend\\Frontend\\Frontend.Host.csproj",
+        "Path": "OrderBookMonitorBackend\\OrderBookMonitorBackend.csproj",
         "Action": "Start"
       },
       {
-        "Path": "OrderBookMonitorBackend\\OrderBookMonitorBackend.csproj",
+        "Path": "Frontend\\Frontend.Host\\Frontend.Host.csproj",
         "Action": "Start"
       }
     ]
