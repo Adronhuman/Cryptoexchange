@@ -1,4 +1,4 @@
-﻿namespace CryptoExchangeBackend.Impl.Providers.Binance
+﻿namespace OrderBookMonitorBackend.Impl.Providers.Binance
 {
     public class Constants
     {

@@ -1,9 +1,9 @@
-using CryptoExchangeBackend.Hubs;
-using CryptoExchangeBackend.Impl.Loggers;
-using CryptoExchangeBackend.Impl.Providers;
-using CryptoExchangeBackend.Impl.Providers.Binance;
-using CryptoExchangeBackend.Interfaces;
-using CryptoExchangeBackend.Workers;
+using OrderBookMonitorBackend.Hubs;
+using OrderBookMonitorBackend.Impl.Loggers;
+using OrderBookMonitorBackend.Impl.Providers;
+using OrderBookMonitorBackend.Impl.Providers.Binance;
+using OrderBookMonitorBackend.Interfaces;
+using OrderBookMonitorBackend.Workers;
 using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);

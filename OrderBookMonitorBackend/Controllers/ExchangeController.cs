@@ -1,9 +1,9 @@
 using Core.Shared.ApiModels;
 using Core.Shared.Domain.Models;
-using CryptoExchangeBackend.Impl.Providers;
 using Microsoft.AspNetCore.Mvc;
+using OrderBookMonitorBackend.Impl.Providers;
 
-namespace CryptoExchangeBackend.Controllers
+namespace OrderBookMonitorBackend.Controllers
 {
     [ApiController]
     [Route("[controller]")]

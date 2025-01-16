@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 
-namespace CryptoExchangeBackend.Hubs
+namespace OrderBookMonitorBackend.Hubs
 {
     public class OrderBookHub : Hub
     {

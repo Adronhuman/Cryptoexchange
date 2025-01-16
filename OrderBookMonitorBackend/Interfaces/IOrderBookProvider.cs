@@ -1,6 +1,6 @@
 ﻿using Core.Shared.Domain.Models;
 
-namespace CryptoExchangeBackend.Interfaces
+namespace OrderBookMonitorBackend.Interfaces
 {
     public interface IOrderBookProvider
     {

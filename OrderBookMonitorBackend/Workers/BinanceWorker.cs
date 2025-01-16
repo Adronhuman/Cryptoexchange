@@ -1,13 +1,13 @@
 ﻿using Core.Shared;
-using CryptoExchangeBackend.Hubs;
-using CryptoExchangeBackend.Impl.Providers;
-using CryptoExchangeBackend.Impl.Providers.Binance;
-using CryptoExchangeBackend.Interfaces;
 using Microsoft.AspNetCore.SignalR;
+using OrderBookMonitorBackend.Hubs;
+using OrderBookMonitorBackend.Impl.Providers;
+using OrderBookMonitorBackend.Impl.Providers.Binance;
+using OrderBookMonitorBackend.Interfaces;
 using System.Diagnostics;
 using static Core.Shared.Constants;
 
-namespace CryptoExchangeBackend.Workers
+namespace OrderBookMonitorBackend.Workers
 {
     public class BinanceWorker : BackgroundService
     {
@@ -22,10 +22,10 @@ namespace CryptoExchangeBackend.Workers
             MultiplePriceLevelsOrderBookProvider mplorderBookProvider)
         {
             _logger = logger;
-            this._apiClient = httpClientFactory;
-            this._hubContext = hubContext;
-            this._logger = logger;
-            this._mplorderBookProvider = mplorderBookProvider;
+            _apiClient = httpClientFactory;
+            _hubContext = hubContext;
+            _logger = logger;
+            _mplorderBookProvider = mplorderBookProvider;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

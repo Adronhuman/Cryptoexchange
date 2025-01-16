@@ -1,11 +1,11 @@
 ﻿using Core.Shared.Domain.Models;
 using Core.Shared.Domain.Operations;
-using CryptoExchangeBackend.Interfaces;
+using OrderBookMonitorBackend.Interfaces;
 using System.Diagnostics;
 using System.Threading.Channels;
 using static Core.Shared.Constants;
 
-namespace CryptoExchangeBackend.Impl.Providers.Binance
+namespace OrderBookMonitorBackend.Impl.Providers.Binance
 {
     public delegate void OrderBookUpdatedEventHandler(object sender, OrderBookDiff diff, OrderBookSnapshot snapshot);
 
@@ -52,7 +52,7 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
 
             var orderBook = Adapter.ToDomain(binanceModel);
 
-            var changeManager = new ChangeManager<Binance.Order>(
+            var changeManager = new ChangeManager<Order>(
                 SelectPrice: o => o.Price,
                 SelectAmount: o => o.Quantity,
                 ClassifyChange: DetermineChange,

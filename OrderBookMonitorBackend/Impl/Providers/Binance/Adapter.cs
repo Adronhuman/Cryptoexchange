@@ -1,6 +1,6 @@
 ﻿using Core.Shared.Domain.Models;
 
-namespace CryptoExchangeBackend.Impl.Providers.Binance
+namespace OrderBookMonitorBackend.Impl.Providers.Binance
 {
     public static class Adapter
     {

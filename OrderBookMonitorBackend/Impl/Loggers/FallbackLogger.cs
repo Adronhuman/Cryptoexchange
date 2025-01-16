@@ -1,7 +1,7 @@
 ﻿using Core.Shared.Domain.Models;
-using CryptoExchangeBackend.Interfaces;
+using OrderBookMonitorBackend.Interfaces;
 
-namespace CryptoExchangeBackend.Impl.Loggers
+namespace OrderBookMonitorBackend.Impl.Loggers
 {
     public class FallbackLogger : IOrderBookLogger
     {

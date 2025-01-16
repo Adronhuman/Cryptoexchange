@@ -3,7 +3,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 
-namespace CryptoExchangeBackend.Impl.Providers.Binance
+namespace OrderBookMonitorBackend.Impl.Providers.Binance
 {
     public class ApiClient
     {
