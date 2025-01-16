@@ -53,14 +53,14 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
                 {
                     await Connect();
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Trace.TraceError($"Websocket client crashed: {ex}");
                 }
             }
         }
 
-        public async Task Connect() 
+        public async Task Connect()
         {
             using var client = new ClientWebSocket();
             var cancellationToken = new CancellationToken();

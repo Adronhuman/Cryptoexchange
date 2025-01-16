@@ -1,7 +1,6 @@
 ﻿using Frontend.Client.Services;
 using Frontend.Client.Settings;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Frontend.Client.DI
 {

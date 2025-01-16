@@ -56,29 +56,29 @@ namespace CryptoExchangeBackend.Impl.Providers.Binance
 
     public class OrderConverter : JsonConverter<Order>
     {
-            public override Order Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override Order Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.StartArray)
             {
-                if (reader.TokenType != JsonTokenType.StartArray)
-                {
-                    reader.Skip();
-                }
-
-                reader.Read();
-                if (!decimal.TryParse(reader.GetString(), out var price))
-                {
-                    throw new JsonException("Invalid token or missing price value.");
-                }
-
-                reader.Read();
-                if (!decimal.TryParse(reader.GetString(), out var quantity))
-                {
-                    throw new JsonException("Invalid token or missing price value.");
-                }
-
-                reader.Read();
-
-                return new Order { Price = price, Quantity = quantity };
+                reader.Skip();
             }
+
+            reader.Read();
+            if (!decimal.TryParse(reader.GetString(), out var price))
+            {
+                throw new JsonException("Invalid token or missing price value.");
+            }
+
+            reader.Read();
+            if (!decimal.TryParse(reader.GetString(), out var quantity))
+            {
+                throw new JsonException("Invalid token or missing price value.");
+            }
+
+            reader.Read();
+
+            return new Order { Price = price, Quantity = quantity };
+        }
 
         public override void Write(Utf8JsonWriter writer, Order value, JsonSerializerOptions options)
         {
