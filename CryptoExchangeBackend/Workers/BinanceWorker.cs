@@ -4,7 +4,6 @@ using CryptoExchangeBackend.Impl.Providers;
 using CryptoExchangeBackend.Impl.Providers.Binance;
 using CryptoExchangeBackend.Interfaces;
 using Microsoft.AspNetCore.SignalR;
-using System.Data;
 using System.Diagnostics;
 using static Core.Shared.Constants;
 
@@ -31,7 +30,7 @@ namespace CryptoExchangeBackend.Workers
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var levels = new[] { OrderBookSize.S50, OrderBookSize.S100};
+            var levels = new[] { OrderBookSize.S50, OrderBookSize.S100 };
             foreach (var level in levels)
             {
                 var (provider, endpoint) = SetupOrderBookProviderForSize(level,
@@ -63,7 +62,7 @@ namespace CryptoExchangeBackend.Workers
                     _logger.LogSnapshot(snapshot);
                 });
             }
-            
+
             orderBookProvider.Subscribe((orderBookDiff, snapshot) =>
             {
                 _hubContext.Clients.All.SendAsync(endpoint, orderBookDiff);

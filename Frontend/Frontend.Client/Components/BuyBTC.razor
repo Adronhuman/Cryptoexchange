@@ -11,7 +11,6 @@
         <p>btc amounnt: @BtcAmount</p>
         <p>Total Price: @FormatCurrencyInEUR(TotalPrice)</p>
     </div>
-    @* <button @onclick="HandleDebouncedCalculation">Call dotnet method</button> *@
 </div>
 
 
@@ -23,10 +22,17 @@
     private decimal BtcAmount = 0;
     private decimal TotalPrice = 0;
 
+    protected async override Task OnInitializedAsync()
+    {
+        OrderBookService.NewOrderBook += (s, ob) =>
+        {
+            RecalculatePrice();
+        };
+    }
+
     // strange version of setTimeout (not a lot of alternatives)
     private async Task Debounce(ChangeEventArgs e)
     {
-        Console.WriteLine("Debounce called - previous should be cancelled");
         TypingInProcessCancellation?.Cancel();
         if (e.Value.ToString() == string.Empty)
         {
@@ -41,19 +47,17 @@
             BtcAmount = decimal.Parse(e.Value.ToString());
             await Task.Delay(500, token);
             if (!token.IsCancellationRequested) {
-                UpdatePrice();
+                RecalculatePrice();
             }
         }
         catch (TaskCanceledException)
         {
-            Console.WriteLine("Debounce cancelled");
         }
     }
 
-    public void UpdatePrice()
+    public void RecalculatePrice()
     {
         TotalPrice = OrderBookService.CalculatePrice(BtcAmount);
-        Console.WriteLine($"Btc amount updated {BtcAmount} {TotalPrice}");
         InvokeAsync(StateHasChanged);
     }
     

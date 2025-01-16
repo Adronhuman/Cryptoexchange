@@ -3,12 +3,7 @@ using Core.Shared.Domain.Models;
 using Core.Shared.Domain.Operations;
 using Frontend.Client.Settings;
 using Microsoft.AspNetCore.SignalR.Client;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.Net.Http.Json;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using System.Web;
 
@@ -24,8 +19,8 @@ namespace Frontend.Client.Services
         private long CurrentOrderBookTimeStamp;
         private readonly Channel<OrderBookDiff> _updateChannel;
         private CancellationTokenSource _subscribeCancellation;
-        
-        public event EventHandler<OrderBookDiff>? OrderBookUpdate;
+        private event EventHandler<OrderBookDiff>? OrderBookUpdate;
+
         public event EventHandler<OrderBook> NewOrderBook = delegate { };
 
         public OrderBookService(HubConnection hubConnection,
@@ -50,7 +45,7 @@ namespace Frontend.Client.Services
 
             CurrentOrderBookTimeStamp = snapshot.TimeStamp;
             await ListenToUpdates(endpointForUpdates);
-            
+
             _orderBookManager = new OrderBookManager(size);
             _orderBookManager.LoadInitial(snapshot.OrderBook.Bids, snapshot.OrderBook.Asks);
 
@@ -83,6 +78,10 @@ namespace Frontend.Client.Services
         public decimal CalculatePrice(decimal requestedAmount)
         {
             var topAsks = _orderBookManager.GetCurrentBook().Asks;
+            if (!topAsks.Any())
+            {
+                return 0;
+            }
 
             decimal totalPrice = 0;
             decimal amountToCover = requestedAmount;

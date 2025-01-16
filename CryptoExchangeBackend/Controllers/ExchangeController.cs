@@ -2,7 +2,6 @@ using Core.Shared.ApiModels;
 using Core.Shared.Domain.Models;
 using CryptoExchangeBackend.Hubs;
 using CryptoExchangeBackend.Impl.Providers;
-using CryptoExchangeBackend.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using System.Text.Json;

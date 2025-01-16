@@ -1,5 +1,4 @@
 using CryptoExchangeBackend.Hubs;
-using CryptoExchangeBackend.Impl;
 using CryptoExchangeBackend.Impl.Loggers;
 using CryptoExchangeBackend.Impl.Providers;
 using CryptoExchangeBackend.Impl.Providers.Binance;

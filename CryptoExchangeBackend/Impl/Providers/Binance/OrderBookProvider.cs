@@ -5,8 +5,8 @@ using CryptoExchangeBackend.Interfaces;
 using System.Diagnostics;
 using System.Threading.Channels;
 using static Core.Shared.Constants;
-using DomainOrderBook = Core.Shared.Domain.Models.OrderBook;
 using DomainOrder = Core.Shared.Domain.Models.Order;
+using DomainOrderBook = Core.Shared.Domain.Models.OrderBook;
 
 namespace CryptoExchangeBackend.Impl.Providers.Binance
 {
