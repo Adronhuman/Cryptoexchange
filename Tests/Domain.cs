@@ -6,12 +6,12 @@ using Tests.Utils;
 
 namespace Tests
 {
-    public class DomainLogic
+    public class Domain
     {
         private ChangeManager<OrderFromCryptoInc> _changeManager;
         private OrderBookManager _orderBookManager;
         private const int BookSize = 50;
-        public DomainLogic()
+        public Domain()
         {
             _changeManager = new ChangeManager<OrderFromCryptoInc>(
                 SelectPrice: o => o.SomePrice,
@@ -37,7 +37,7 @@ namespace Tests
             // 2
             var bidToAdd = new OrderFromCryptoInc(
                 somePrice: initialAsks.Select(a => a.SomePrice).GenerateUniqueDecimalNotInCollection(),
-                someAmount: (decimal)0.91
+                someAmount: 0.91m
             );
 
             // 3
@@ -173,6 +173,47 @@ namespace Tests
                 $"{GenerateDescription()}\n" +
                 string.Join(", ", CollectionUtils.GetDifferences(asksAfterManagersUpdate, asksTrue))
             );
+        }
+
+        [Fact]
+        public void TestPriceCalculation()
+        {
+            var bids = CollectionUtils.GenerateNUnique(100, OrderFromCryptoInc.CreateRandom, o => o.SomePrice);
+            var asks = CollectionUtils.GenerateNUnique(100, OrderFromCryptoInc.CreateRandom, o => o.SomePrice);
+            
+            var asksSorted = asks.OrderBy(o => o.SomePrice).ToList();
+
+            // I'll use an arithmetic progression - 1,2,3,4 ... 100
+            // This approach looks more robust than programmatically calculating it
+            // as it prevents replicating potential mistakes from the actual implementation
+            foreach (var (i, ask) in asksSorted.Select((x, i) => (i,x)))
+            {
+                ask.SomePrice = 1;
+                ask.SomeAmount = i+1;
+            }
+
+            // Calculate true price
+            // 1830 is the sum of the first 60 numbers in the sequence.
+            // We need the full amount from each ask in the range [1, 60], and an additional 30 units from the 61st ask.
+            decimal amount = 1830 + 30;
+            decimal truePrice = 0;
+            for (var i = 0; i < 60; i++)
+            {
+                truePrice += asksSorted[i].SomePrice * asksSorted[i].SomeAmount;
+            }
+            truePrice += asksSorted[61].SomePrice * 30;
+
+
+            // Calculate price using manager
+            _orderBookManager = new OrderBookManager(100);
+            _orderBookManager.LoadInitial(
+                bids.Select(o => o.ToDomain()),
+                asks.Select(o => o.ToDomain())
+            );
+
+            decimal estimatedPrice = _orderBookManager.CalculatePrice(amount);
+
+            Assert.True(estimatedPrice == truePrice);
         }
 
         private static bool AreEqual(IEnumerable<Order> one, IEnumerable<Order> another)

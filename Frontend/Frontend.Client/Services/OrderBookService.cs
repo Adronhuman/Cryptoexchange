@@ -83,36 +83,7 @@ namespace Frontend.Client.Services
 
         public decimal CalculatePrice(decimal requestedAmount)
         {
-            var topAsks = _orderBookManager.GetCurrentBook().Asks;
-            if (!topAsks.Any())
-            {
-                return 0;
-            }
-
-            decimal totalPrice = 0;
-            decimal amountToCover = requestedAmount;
-            foreach (var ask in topAsks)
-            {
-                if (amountToCover <= ask.Price)
-                {
-                    totalPrice += ask.Price * amountToCover;
-                    amountToCover = 0;
-                    break;
-                }
-                else
-                {
-                    amountToCover -= ask.Amount;
-                    totalPrice += ask.Amount * ask.Price;
-                }
-            }
-
-            if (amountToCover == 0) return totalPrice;
-
-            // Warning: This is a temporary solution ("voodoo dance") that should be revisited in the future.
-            // For now, the remaining amount is covered using the price of the last known ask.
-            var biggestPrice = topAsks.Last().Price;
-            totalPrice += amountToCover * biggestPrice;
-            return totalPrice;
+            return _orderBookManager.CalculatePrice(requestedAmount);
         }
 
         private void Refresh()
