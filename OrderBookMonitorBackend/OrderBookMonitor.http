@@ -1,6 +1,6 @@
 @CryptoExchangeBackend_HostAddress = http://localhost:5066
 
-GET {{CryptoExchangeBackend_HostAddress}}/weatherforecast/
+GET {{CryptoExchangeBackend_HostAddress}}/exchange/orderBook?size=50
 Accept: application/json
 
 ###

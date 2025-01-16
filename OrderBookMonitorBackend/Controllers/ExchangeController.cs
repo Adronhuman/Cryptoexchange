@@ -16,6 +16,12 @@ namespace CryptoExchangeBackend.Controllers
             _mplOrderBookProvider = orderBookProvider;
         }
 
+        [HttpGet("healthcheck")]
+        public async Task<IActionResult> HealthCheck()
+        {
+            return Ok(new { status = "healthy" });
+        }
+
         [HttpGet("orderBook")]
         public async Task<IActionResult> GetOrderBook(int size)
         {
