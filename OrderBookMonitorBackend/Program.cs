@@ -37,13 +37,13 @@ builder.Services.AddHostedService<BinanceWorker>();
 
 builder.Services.AddCors(options =>
 {
-    var frontendOrigin = builder.Configuration["FrontendOrigin"];
+    var frontendOrigins = builder.Configuration.GetSection("FrontendOrigins").Get<string[]>();
     options.AddPolicy("AllowFrontend", policy =>
     {
-        if (frontendOrigin != null)
+        if (frontendOrigins != null && frontendOrigins.Length > 0)
         {
             policy
-            .WithOrigins(frontendOrigin)
+            .WithOrigins(frontendOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();

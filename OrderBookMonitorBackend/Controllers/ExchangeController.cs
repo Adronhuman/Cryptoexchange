@@ -17,7 +17,7 @@ namespace OrderBookMonitorBackend.Controllers
         }
 
         [HttpGet("healthcheck")]
-        public async Task<IActionResult> HealthCheck()
+        public IActionResult HealthCheck()
         {
             return Ok(new { status = "healthy" });
         }
